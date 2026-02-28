@@ -9,7 +9,7 @@
 <body>
 <main>
   <h1>paper crop</h1>
-  <p class="desc">画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。キャンバスは画像周囲に余白を持ち、選択は画像範囲を越えない。破れ端は自己アフィン（Hurst指数相当）な折れ線で生成する（UI変更なし）。</p>
+  <p class="desc">画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。</p>
 
   <div class="panel">
     <div class="row">
@@ -71,13 +71,6 @@
     <div class="canvas-wrap" style="margin-top:12px;"><canvas id="outCanvas"></canvas></div>
   </div>
 
-  <footer>
-    <strong>使い方</strong><br>
-    1. 画像を読み込む → 2. ドラッグで範囲指定 → 3. Crop<br>
-    <strong>依存</strong>: なし（Canvas API のみ）。完全オフライン対応。<br>
-    <strong>保存</strong>: 状態は保存しない。<br>
-    <strong>破れ生成</strong>: midpoint displacement による自己アフィン折れ線（H固定、繊維方向=上下の異方性）。
-  </footer>
 </main>
 
 <script src="app.js"></script>
