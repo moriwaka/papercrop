@@ -50,6 +50,11 @@
         <label>破れ強度: <input type="range" id="roughness" min="2" max="20" step="1" value="8"></label>
       </div>
 
+      <div class="row effect-options">
+        <label><input type="checkbox" id="outlineEnabled" checked> 輪郭線</label>
+        <label><input type="checkbox" id="shadowEnabled" checked> ドロップシャドウ</label>
+      </div>
+
       <div class="row edge-buttons">
         <button id="allStraightBtn" class="secondary">全て直線</button>
         <button id="allTornBtn" class="secondary">全て破れ</button>
@@ -68,7 +73,7 @@
       <button id="downloadBtn" class="secondary" disabled>Download PNG</button>
       <button id="copyBtn" class="secondary" disabled>Copy to clipboard</button>
     </div>
-    <div class="canvas-wrap" style="margin-top:12px;"><canvas id="outCanvas"></canvas></div>
+    <div class="canvas-wrap preview-wrap" style="margin-top:12px;"><canvas id="outCanvas"></canvas></div>
   </div>
 
 </main>

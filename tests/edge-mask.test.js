@@ -88,3 +88,23 @@ test('edge bounds stay non-crossing per scanline/column', () => {
     assert.ok(bounds.left[y] <= bounds.right[y]);
   }
 });
+
+test('corner connector wedges are masked out', () => {
+  const w = 96;
+  const h = 72;
+  const imageData = createImageData(w, h);
+  const bounds = buildEdgeBounds(w, h, 16, {
+    top: 'torn',
+    right: 'torn',
+    bottom: 'torn',
+    left: 'torn'
+  });
+
+  applyEdgeMask(imageData, bounds, w, h);
+
+  // Points near each corner where old logic could leave triangular artifacts.
+  assert.equal(alphaAt(imageData, w, w - 2, 1), 0);
+  assert.equal(alphaAt(imageData, w, 1, 1), 0);
+  assert.equal(alphaAt(imageData, w, w - 2, h - 2), 0);
+  assert.equal(alphaAt(imageData, w, 1, h - 2), 0);
+});

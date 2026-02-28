@@ -6,6 +6,8 @@ const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
 const roughnessInput = document.getElementById('roughness');
+const outlineEnabled = document.getElementById('outlineEnabled');
+const shadowEnabled = document.getElementById('shadowEnabled');
 
 const edgeTop = document.getElementById('edgeTop');
 const edgeRight = document.getElementById('edgeRight');
@@ -16,7 +18,11 @@ const allTornBtn = document.getElementById('allTornBtn');
 
 const srcCtx = srcCanvas.getContext('2d');
 const outCtx = outCanvas.getContext('2d');
-const { buildEdgeBounds, applyEdgeMask } = window.PaperCropEdgeMask;
+const { buildEdgeBounds, applyEdgeMask, findCornerIntersections, sample } = window.PaperCropEdgeMask;
+const SHADOW_COLOR = 'rgba(0, 0, 0, 0.45)';
+const SHADOW_BLUR = 14;
+const SHADOW_OFFSET_X = 0;
+const SHADOW_OFFSET_Y = 6;
 
 let img = null;
 let dragging = false;
@@ -139,14 +145,81 @@ function redrawSource(){
   }
 }
 
+function drawEdgePath(ctx, bounds, w, h, ox, oy){
+  const corners = findCornerIntersections(bounds, w, h);
+
+  const topStart = Math.max(0, Math.ceil(corners.tl.x));
+  const topEnd = Math.min(w, Math.floor(corners.tr.x));
+  const rightStart = Math.max(0, Math.ceil(corners.tr.y));
+  const rightEnd = Math.min(h, Math.floor(corners.br.y));
+  const bottomStart = Math.max(0, Math.floor(corners.br.x));
+  const bottomEnd = Math.min(w, Math.ceil(corners.bl.x));
+  const leftStart = Math.max(0, Math.floor(corners.bl.y));
+  const leftEnd = Math.min(h, Math.ceil(corners.tl.y));
+
+  ctx.beginPath();
+  ctx.moveTo(ox + corners.tl.x, oy + corners.tl.y);
+
+  for (let x = topStart; x <= topEnd; x++){
+    ctx.lineTo(ox + x, oy + sample(bounds.top, x));
+  }
+  ctx.lineTo(ox + corners.tr.x, oy + corners.tr.y);
+
+  for (let y = rightStart; y <= rightEnd; y++){
+    ctx.lineTo(ox + sample(bounds.right, y), oy + y);
+  }
+  ctx.lineTo(ox + corners.br.x, oy + corners.br.y);
+
+  for (let x = bottomStart; x >= bottomEnd; x--){
+    ctx.lineTo(ox + x, oy + sample(bounds.bottom, x));
+  }
+  ctx.lineTo(ox + corners.bl.x, oy + corners.bl.y);
+
+  for (let y = leftStart; y >= leftEnd; y--){
+    ctx.lineTo(ox + sample(bounds.left, y), oy + y);
+  }
+  ctx.lineTo(ox + corners.tl.x, oy + corners.tl.y);
+  ctx.closePath();
+}
+
+function computeOutputInsets(withShadow, withOutline){
+  let left = 0;
+  let right = 0;
+  let top = 0;
+  let bottom = 0;
+
+  if (withOutline){
+    const outlineInset = 2;
+    left = Math.max(left, outlineInset);
+    right = Math.max(right, outlineInset);
+    top = Math.max(top, outlineInset);
+    bottom = Math.max(bottom, outlineInset);
+  }
+
+  if (withShadow){
+    const spread = Math.ceil(SHADOW_BLUR * 2);
+    left = Math.max(left, spread + Math.max(0, -SHADOW_OFFSET_X));
+    right = Math.max(right, spread + Math.max(0, SHADOW_OFFSET_X));
+    top = Math.max(top, spread + Math.max(0, -SHADOW_OFFSET_Y));
+    bottom = Math.max(bottom, spread + Math.max(0, SHADOW_OFFSET_Y));
+  }
+
+  return { left, right, top, bottom };
+}
+
 cropBtn.addEventListener('click', () => {
   if (!rect || rect.w < 2 || rect.h < 2) return;
 
   const w = Math.round(rect.w);
   const h = Math.round(rect.h);
-  outCanvas.width = w;
-  outCanvas.height = h;
-  outCtx.clearRect(0, 0, w, h);
+  const withShadow = shadowEnabled.checked;
+  const withOutline = outlineEnabled.checked;
+  const insets = computeOutputInsets(withShadow, withOutline);
+  const outW = w + insets.left + insets.right;
+  const outH = h + insets.top + insets.bottom;
+  outCanvas.width = outW;
+  outCanvas.height = outH;
+  outCtx.clearRect(0, 0, outW, outH);
 
   // 画像座標へ変換（余白オフセットを引く）
   const sx = rect.x - imgOX;
@@ -159,10 +232,39 @@ cropBtn.addEventListener('click', () => {
     bottom: edgeBottom.value,
     left: edgeLeft.value
   });
-  outCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
-  const imageData = outCtx.getImageData(0, 0, w, h);
+
+  const maskedCanvas = document.createElement('canvas');
+  maskedCanvas.width = w;
+  maskedCanvas.height = h;
+  const maskedCtx = maskedCanvas.getContext('2d');
+  maskedCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
+  const imageData = maskedCtx.getImageData(0, 0, w, h);
   applyEdgeMask(imageData, bounds, w, h);
-  outCtx.putImageData(imageData, 0, 0);
+  maskedCtx.putImageData(imageData, 0, 0);
+
+  if (withShadow){
+    outCtx.save();
+    outCtx.shadowColor = SHADOW_COLOR;
+    outCtx.shadowBlur = SHADOW_BLUR;
+    outCtx.shadowOffsetX = SHADOW_OFFSET_X;
+    outCtx.shadowOffsetY = SHADOW_OFFSET_Y;
+    outCtx.drawImage(maskedCanvas, insets.left, insets.top);
+    outCtx.restore();
+  }
+
+  outCtx.drawImage(maskedCanvas, insets.left, insets.top);
+
+  if (withOutline){
+    outCtx.save();
+    outCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    outCtx.lineWidth = 1.5;
+    outCtx.lineJoin = 'round';
+    outCtx.lineCap = 'round';
+    outCtx.miterLimit = 2;
+    drawEdgePath(outCtx, bounds, w, h, insets.left, insets.top);
+    outCtx.stroke();
+    outCtx.restore();
+  }
 
   downloadBtn.disabled = false;
   copyBtn.disabled = false;

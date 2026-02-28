@@ -109,20 +109,100 @@
     return { top, right, bottom, left };
   }
 
+  function sample(arr, t){
+    const lo = 0;
+    const hi = arr.length - 1;
+    if (t <= lo) return arr[lo];
+    if (t >= hi) return arr[hi];
+    const i0 = Math.floor(t);
+    const i1 = Math.min(i0 + 1, hi);
+    const a = t - i0;
+    return (1 - a) * arr[i0] + a * arr[i1];
+  }
+
+  function findCornerIntersections(bounds, w, h){
+    const { top, right, bottom, left } = bounds;
+
+    function solveTL(){
+      let x = 0;
+      let y = top[0];
+      for (let i = 0; i < 12; i++){
+        y = sample(top, x);
+        x = sample(left, y);
+      }
+      return { x, y };
+    }
+
+    function solveTR(){
+      let x = w;
+      let y = top[w];
+      for (let i = 0; i < 12; i++){
+        y = sample(top, x);
+        x = sample(right, y);
+      }
+      return { x, y };
+    }
+
+    function solveBR(){
+      let x = w;
+      let y = bottom[w];
+      for (let i = 0; i < 12; i++){
+        y = sample(bottom, x);
+        x = sample(right, y);
+      }
+      return { x, y };
+    }
+
+    function solveBL(){
+      let x = 0;
+      let y = bottom[0];
+      for (let i = 0; i < 12; i++){
+        y = sample(bottom, x);
+        x = sample(left, y);
+      }
+      return { x, y };
+    }
+
+    return {
+      tl: solveTL(),
+      tr: solveTR(),
+      br: solveBR(),
+      bl: solveBL()
+    };
+  }
+
   function applyEdgeMask(imageData, bounds, w, h){
     const { top, right, bottom, left } = bounds;
     const data = imageData.data;
+    const corners = findCornerIntersections(bounds, w, h);
 
     for (let y = 0; y < h; y++){
-      const l = left[y];
-      const r = right[y];
       const rowOffset = y * w * 4;
       for (let x = 0; x < w; x++){
-        const inside =
-          y >= top[x] &&
-          y <= bottom[x] &&
-          x >= l &&
-          x <= r;
+        const px = x + 0.5;
+        const py = y + 0.5;
+        let inside = true;
+
+        if ((px < corners.tl.x && py < corners.tl.y) ||
+            (px > corners.tr.x && py < corners.tr.y) ||
+            (px > corners.br.x && py > corners.br.y) ||
+            (px < corners.bl.x && py > corners.bl.y)){
+          inside = false;
+        }
+
+        if (px >= corners.tl.x && px <= corners.tr.x){
+          inside = inside && py >= sample(top, px);
+        }
+        if (px >= corners.bl.x && px <= corners.br.x){
+          inside = inside && py <= sample(bottom, px);
+        }
+        if (py >= corners.tl.y && py <= corners.bl.y){
+          inside = inside && px >= sample(left, py);
+        }
+        if (py >= corners.tr.y && py <= corners.br.y){
+          inside = inside && px <= sample(right, py);
+        }
+
         if (!inside){
           data[rowOffset + x * 4 + 3] = 0;
         }
@@ -132,6 +212,8 @@
 
   return {
     buildEdgeBounds,
-    applyEdgeMask
+    applyEdgeMask,
+    findCornerIntersections,
+    sample
   };
 });
