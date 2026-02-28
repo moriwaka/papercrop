@@ -9,46 +9,53 @@
 <body>
 <main>
   <h1>paper crop</h1>
-  <p class="desc">画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。</p>
+  <p class="desc" id="mainDesc">画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。</p>
   <input type="file" id="fileInput" accept="image/*" hidden>
 
   <div class="panel">
+    <div class="row lang-row">
+      <label for="langSelect" id="langLabel">言語</label>
+      <select id="langSelect">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+      </select>
+    </div>
     <div class="controls-block">
       <div class="edge-cross">
-        <label class="edge-top">上エッジ:
+        <label class="edge-top"><span id="edgeTopLabel">上エッジ</span>:
           <select id="edgeTop">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label class="edge-right">右エッジ:
+        <label class="edge-right"><span id="edgeRightLabel">右エッジ</span>:
           <select id="edgeRight">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label class="edge-bottom">下エッジ:
+        <label class="edge-bottom"><span id="edgeBottomLabel">下エッジ</span>:
           <select id="edgeBottom">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label class="edge-left">左エッジ:
+        <label class="edge-left"><span id="edgeLeftLabel">左エッジ</span>:
           <select id="edgeLeft">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <div class="edge-center">エッジ形状</div>
+        <div class="edge-center" id="edgeCenterLabel">エッジ形状</div>
       </div>
 
       <div class="roughness-row">
-        <label>破れ強度: <input type="range" id="roughness" min="2" max="20" step="1" value="8"></label>
+        <label><span id="roughnessLabel">破れ強度</span>: <input type="range" id="roughness" min="2" max="20" step="1" value="8"></label>
       </div>
 
       <div class="row effect-options">
-        <label><input type="checkbox" id="outlineEnabled" checked> 輪郭線</label>
-        <label><input type="checkbox" id="shadowEnabled" checked> ドロップシャドウ</label>
+        <label><input type="checkbox" id="outlineEnabled" checked> <span id="outlineLabel">輪郭線</span></label>
+        <label><input type="checkbox" id="shadowEnabled" checked> <span id="shadowLabel">ドロップシャドウ</span></label>
       </div>
 
       <div class="row edge-buttons">
@@ -59,7 +66,7 @@
   </div>
 
   <div class="panel">
-    <p class="desc">画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。</p>
+    <p class="desc" id="sourceDesc">画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。</p>
     <div class="row upload-actions">
       <button id="newUploadBtn" class="secondary">新規アップロード</button>
       <button id="pasteUploadBtn" class="secondary">クリップボードから貼り付け</button>

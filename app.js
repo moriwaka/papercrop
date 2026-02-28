@@ -7,10 +7,23 @@ const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
 const newUploadBtn = document.getElementById('newUploadBtn');
 const pasteUploadBtn = document.getElementById('pasteUploadBtn');
+const langSelect = document.getElementById('langSelect');
 const roughnessInput = document.getElementById('roughness');
 const outlineEnabled = document.getElementById('outlineEnabled');
 const shadowEnabled = document.getElementById('shadowEnabled');
 const srcDropZone = document.getElementById('srcDropZone');
+const srcHint = document.getElementById('srcHint');
+const mainDesc = document.getElementById('mainDesc');
+const sourceDesc = document.getElementById('sourceDesc');
+const langLabel = document.getElementById('langLabel');
+const edgeTopLabel = document.getElementById('edgeTopLabel');
+const edgeRightLabel = document.getElementById('edgeRightLabel');
+const edgeBottomLabel = document.getElementById('edgeBottomLabel');
+const edgeLeftLabel = document.getElementById('edgeLeftLabel');
+const edgeCenterLabel = document.getElementById('edgeCenterLabel');
+const roughnessLabel = document.getElementById('roughnessLabel');
+const outlineLabel = document.getElementById('outlineLabel');
+const shadowLabel = document.getElementById('shadowLabel');
 
 const edgeTop = document.getElementById('edgeTop');
 const edgeRight = document.getElementById('edgeRight');
@@ -32,9 +45,127 @@ let dragging = false;
 let startX = 0, startY = 0;
 let rect = null;
 let currentObjectUrl = null;
+let currentLang = 'ja';
 
 const PAD = 32;           // 画像まわりの余白(px)
 let imgOX = 0, imgOY = 0; // 画像の描画オフセット
+const I18N = {
+  ja: {
+    langLabel: '言語',
+    mainDesc: '画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。',
+    edgeTopLabel: '上エッジ',
+    edgeRightLabel: '右エッジ',
+    edgeBottomLabel: '下エッジ',
+    edgeLeftLabel: '左エッジ',
+    edgeCenterLabel: 'エッジ形状',
+    roughnessLabel: '破れ強度',
+    outlineLabel: '輪郭線',
+    shadowLabel: 'ドロップシャドウ',
+    allStraightBtn: '全て直線',
+    allTornBtn: '全て破れ',
+    sourceDesc: '画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。',
+    newUploadBtn: '新規アップロード',
+    pasteUploadBtn: 'クリップボードから貼り付け',
+    resetBtn: 'リセット',
+    srcHint: 'ここをクリック / ドロップで画像をアップロード',
+    cropBtn: 'Crop',
+    downloadBtn: 'Download PNG',
+    copyBtn: 'Copy to clipboard',
+    edgeStraight: '直線',
+    edgeTorn: '紙を破った風',
+    alertLoadFail: '画像の読み込みに失敗しました',
+    alertClipboardUnsupported: 'このブラウザではクリップボード読み取りに対応していません',
+    alertClipboardNoImage: 'クリップボードに画像がありません',
+    alertClipboardReadFail: 'クリップボードからの読み取りに失敗しました',
+    alertClipboardCopyFail: 'クリップボードへのコピーに失敗しました'
+  },
+  en: {
+    langLabel: 'Language',
+    mainDesc: 'A tool to crop images into rectangular regions with per-edge shape control.',
+    edgeTopLabel: 'Top Edge',
+    edgeRightLabel: 'Right Edge',
+    edgeBottomLabel: 'Bottom Edge',
+    edgeLeftLabel: 'Left Edge',
+    edgeCenterLabel: 'Edge Shape',
+    roughnessLabel: 'Tear Roughness',
+    outlineLabel: 'Outline',
+    shadowLabel: 'Drop Shadow',
+    allStraightBtn: 'All Straight',
+    allTornBtn: 'All Torn',
+    sourceDesc: 'Drag on the image to select a crop region. Dragging over margin is clamped to image bounds.',
+    newUploadBtn: 'Upload New Image',
+    pasteUploadBtn: 'Paste from Clipboard',
+    resetBtn: 'Reset',
+    srcHint: 'Click or drop an image here to upload',
+    cropBtn: 'Crop',
+    downloadBtn: 'Download PNG',
+    copyBtn: 'Copy to Clipboard',
+    edgeStraight: 'Straight',
+    edgeTorn: 'Torn Paper',
+    alertLoadFail: 'Failed to load image',
+    alertClipboardUnsupported: 'Clipboard read is not supported in this browser',
+    alertClipboardNoImage: 'No image found in clipboard',
+    alertClipboardReadFail: 'Failed to read from clipboard',
+    alertClipboardCopyFail: 'Failed to copy to clipboard'
+  }
+};
+
+function t(key){
+  const pack = I18N[currentLang] || I18N.ja;
+  return pack[key] || key;
+}
+
+function applyLanguage(lang){
+  if (!I18N[lang]) lang = 'ja';
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  langSelect.value = lang;
+  try {
+    localStorage.setItem('papercrop_lang', lang);
+  } catch (e){
+    // ignore storage errors
+  }
+
+  langLabel.textContent = t('langLabel');
+  mainDesc.textContent = t('mainDesc');
+  edgeTopLabel.textContent = t('edgeTopLabel');
+  edgeRightLabel.textContent = t('edgeRightLabel');
+  edgeBottomLabel.textContent = t('edgeBottomLabel');
+  edgeLeftLabel.textContent = t('edgeLeftLabel');
+  edgeCenterLabel.textContent = t('edgeCenterLabel');
+  roughnessLabel.textContent = t('roughnessLabel');
+  outlineLabel.textContent = t('outlineLabel');
+  shadowLabel.textContent = t('shadowLabel');
+  allStraightBtn.textContent = t('allStraightBtn');
+  allTornBtn.textContent = t('allTornBtn');
+  sourceDesc.textContent = t('sourceDesc');
+  newUploadBtn.textContent = t('newUploadBtn');
+  pasteUploadBtn.textContent = t('pasteUploadBtn');
+  resetBtn.textContent = t('resetBtn');
+  srcHint.textContent = t('srcHint');
+  cropBtn.textContent = t('cropBtn');
+  downloadBtn.textContent = t('downloadBtn');
+  copyBtn.textContent = t('copyBtn');
+
+  for (const option of document.querySelectorAll('select option[value="straight"]')){
+    option.textContent = t('edgeStraight');
+  }
+  for (const option of document.querySelectorAll('select option[value="torn"]')){
+    option.textContent = t('edgeTorn');
+  }
+}
+
+function getInitialLanguage(){
+  try {
+    const saved = localStorage.getItem('papercrop_lang');
+    if (saved && I18N[saved]) return saved;
+  } catch (e){
+    // ignore storage errors
+  }
+  const navLang = (navigator.language || '').toLowerCase();
+  if (navLang.startsWith('ja')) return 'ja';
+  return 'en';
+}
 
 function setAllEdges(mode){
   edgeTop.value = mode;
@@ -89,7 +220,7 @@ function loadImageFromBlob(blob){
     }
   };
   nextImg.onerror = () => {
-    alert('画像の読み込みに失敗しました');
+    alert(t('alertLoadFail'));
     updateSourceState();
     if (currentObjectUrl === url){
       URL.revokeObjectURL(url);
@@ -146,7 +277,7 @@ srcDropZone.addEventListener('drop', (e) => {
 
 async function uploadFromClipboard(){
   if (!navigator.clipboard || !navigator.clipboard.read){
-    alert('このブラウザではクリップボード読み取りに対応していません');
+    alert(t('alertClipboardUnsupported'));
     return;
   }
   try{
@@ -159,9 +290,9 @@ async function uploadFromClipboard(){
         return;
       }
     }
-    alert('クリップボードに画像がありません');
+    alert(t('alertClipboardNoImage'));
   } catch (e){
-    alert('クリップボードからの読み取りに失敗しました');
+    alert(t('alertClipboardReadFail'));
   }
 }
 
@@ -381,12 +512,12 @@ copyBtn.addEventListener('click', async () => {
   outCanvas.toBlob(async (blob) => {
     try{
       if (!blob){
-        alert('Clipboard copy failed');
+        alert(t('alertClipboardCopyFail'));
         return;
       }
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
     } catch (e){
-      alert('Clipboard copy failed');
+      alert(t('alertClipboardCopyFail'));
     }
   });
 });
@@ -400,3 +531,7 @@ resetBtn.addEventListener('click', () => {
 srcCanvas.width = 960;
 srcCanvas.height = 420;
 updateSourceState();
+applyLanguage(getInitialLanguage());
+langSelect.addEventListener('change', () => {
+  applyLanguage(langSelect.value);
+});
