@@ -17,39 +17,40 @@
       <button id="resetBtn" class="secondary">リセット</button>
     </div>
 
-    <div style="margin-top:10px;">
-      <div class="grid4">
-        <label>上エッジ:
+    <div class="controls-block">
+      <div class="edge-cross">
+        <label class="edge-top">上エッジ:
           <select id="edgeTop">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label>右エッジ:
+        <label class="edge-right">右エッジ:
           <select id="edgeRight">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label>下エッジ:
+        <label class="edge-bottom">下エッジ:
           <select id="edgeBottom">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
-        <label>左エッジ:
+        <label class="edge-left">左エッジ:
           <select id="edgeLeft">
             <option value="straight">直線</option>
             <option value="torn">紙を破った風</option>
           </select>
         </label>
+        <div class="edge-center">エッジ形状</div>
       </div>
 
-      <div style="margin-top:10px;">
+      <div class="roughness-row">
         <label>破れ強度: <input type="range" id="roughness" min="2" max="20" step="1" value="8"></label>
       </div>
 
-      <div class="row" style="margin-top:8px;">
+      <div class="row edge-buttons">
         <button id="allStraightBtn" class="secondary">全て直線</button>
         <button id="allTornBtn" class="secondary">全て破れ</button>
       </div>
