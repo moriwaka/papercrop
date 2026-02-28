@@ -64,4 +64,3 @@ canvas{ max-width:100%; background:#000; border-radius:4px; }
   }
   .edge-center{ display:none; }
 }
-footer{ margin-top:24px; font-size:0.8rem; color:var(--muted); border-top:1px solid #2a2f3a; padding-top:12px; }
