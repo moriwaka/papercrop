@@ -197,8 +197,8 @@ function redrawSource(){
   }
 }
 
-// --- Edge-aware path using self-affine profiles (H fixed, anisotropy by edge) ---
-function buildEdgeAwarePath(ctx, w, h, rough, edges){
+// --- Edge-aware mask bounds using self-affine profiles (H fixed, anisotropy by edge) ---
+function buildEdgeBounds(w, h, rough, edges){
   const t = Math.min(60, Math.floor(Math.min(w, h) / 3));
 
   // 帯域内の中心位置（0..t）
@@ -213,57 +213,54 @@ function buildEdgeAwarePath(ctx, w, h, rough, edges){
   const H_left = H_PAR, amp_left = AMP_PAR;
   const H_right = H_PAR, amp_right = AMP_PAR;
 
-  ctx.moveTo(0, 0);
+  const topProf = edges.top === 'torn' ? fbmMidpointProfile(w, rough, H_top, amp_top, BASE_SEED + 1) : null;
+  const rightProf = edges.right === 'torn' ? fbmMidpointProfile(h, rough, H_right, amp_right, BASE_SEED + 2) : null;
+  const bottomProf = edges.bottom === 'torn' ? fbmMidpointProfile(w, rough, H_bottom, amp_bottom, BASE_SEED + 3) : null;
+  const leftProf = edges.left === 'torn' ? fbmMidpointProfile(h, rough, H_left, amp_left, BASE_SEED + 4) : null;
 
-  // top: (0,0) -> (w,0)
-  if (edges.top === 'torn'){
-    const prof = fbmMidpointProfile(w, rough, H_top, amp_top, BASE_SEED + 1);
-    for (let x = 0; x <= w; x++){
-      const y = clamp(baseTop + prof[x], 0, t);
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(w, 0);
-  } else {
-    ctx.lineTo(w, 0);
+  const topY = (x) => topProf ? clamp(baseTop + topProf[x], 0, t) : 0;
+  const rightX = (y) => rightProf ? (w - (t - clamp(baseRight + rightProf[y], 0, t))) : w;
+  const bottomY = (x) => bottomProf ? (h - (t - clamp(baseBottom + bottomProf[x], 0, t))) : h;
+  const leftX = (y) => leftProf ? clamp(baseLeft + leftProf[y], 0, t) : 0;
+
+  const top = new Array(w + 1);
+  const bottom = new Array(w + 1);
+  const left = new Array(h + 1);
+  const right = new Array(h + 1);
+
+  for (let x = 0; x <= w; x++){
+    top[x] = topY(x);
+    bottom[x] = bottomY(x);
+  }
+  for (let y = 0; y <= h; y++){
+    left[y] = leftX(y);
+    right[y] = rightX(y);
   }
 
-  // right: (w,0) -> (w,h)
-  if (edges.right === 'torn'){
-    const prof = fbmMidpointProfile(h, rough, H_right, amp_right, BASE_SEED + 2);
-    for (let y = 0; y <= h; y++){
-      const xBand = clamp(baseRight + prof[y], 0, t);
-      ctx.lineTo(w - (t - xBand), y);
-    }
-    ctx.lineTo(w, h);
-  } else {
-    ctx.lineTo(w, h);
-  }
+  return { top, right, bottom, left };
+}
 
-  // bottom: (w,h) -> (0,h)
-  if (edges.bottom === 'torn'){
-    const prof = fbmMidpointProfile(w, rough, H_bottom, amp_bottom, BASE_SEED + 3);
-    for (let x = w; x >= 0; x--){
-      const yBand = clamp(baseBottom + prof[x], 0, t);
-      ctx.lineTo(x, h - (t - yBand));
-    }
-    ctx.lineTo(0, h);
-  } else {
-    ctx.lineTo(0, h);
-  }
+function applyEdgeMask(imageData, bounds, w, h){
+  const { top, right, bottom, left } = bounds;
+  const data = imageData.data;
 
-  // left: (0,h) -> (0,0)
-  if (edges.left === 'torn'){
-    const prof = fbmMidpointProfile(h, rough, H_left, amp_left, BASE_SEED + 4);
-    for (let y = h; y >= 0; y--){
-      const xBand = clamp(baseLeft + prof[y], 0, t);
-      ctx.lineTo(xBand, y);
+  for (let y = 0; y < h; y++){
+    const yi = Math.min(y, h);
+    const l = left[yi];
+    const r = right[yi];
+    const rowOffset = y * w * 4;
+    for (let x = 0; x < w; x++){
+      const xi = Math.min(x, w);
+      const inside =
+        y >= top[xi] &&
+        y <= bottom[xi] &&
+        x >= l &&
+        x <= r;
+      if (!inside){
+        data[rowOffset + x * 4 + 3] = 0;
+      }
     }
-    ctx.lineTo(0, 0);
-  } else {
-    ctx.lineTo(0, 0);
   }
-
-  ctx.closePath();
 }
 
 cropBtn.addEventListener('click', () => {
@@ -279,20 +276,17 @@ cropBtn.addEventListener('click', () => {
   const sx = rect.x - imgOX;
   const sy = rect.y - imgOY;
 
-  outCtx.save();
   const rough = Number(roughnessInput.value);
-
-  outCtx.beginPath();
-  buildEdgeAwarePath(outCtx, w, h, rough, {
+  const bounds = buildEdgeBounds(w, h, rough, {
     top: edgeTop.value,
     right: edgeRight.value,
     bottom: edgeBottom.value,
     left: edgeLeft.value
   });
-  outCtx.clip();
-
   outCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
-  outCtx.restore();
+  const imageData = outCtx.getImageData(0, 0, w, h);
+  applyEdgeMask(imageData, bounds, w, h);
+  outCtx.putImageData(imageData, 0, 0);
 
   downloadBtn.disabled = false;
   copyBtn.disabled = false;
