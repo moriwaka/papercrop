@@ -10,13 +10,9 @@
 <main>
   <h1>paper crop</h1>
   <p class="desc">画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。</p>
+  <input type="file" id="fileInput" accept="image/*" hidden>
 
   <div class="panel">
-    <div class="row">
-      <label>画像を選択: <input type="file" id="fileInput" accept="image/*"></label>
-      <button id="resetBtn" class="secondary">リセット</button>
-    </div>
-
     <div class="controls-block">
       <div class="edge-cross">
         <label class="edge-top">上エッジ:
@@ -64,7 +60,15 @@
 
   <div class="panel">
     <p class="desc">画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。</p>
-    <div class="canvas-wrap"><canvas id="srcCanvas"></canvas></div>
+    <div class="row upload-actions">
+      <button id="newUploadBtn" class="secondary">新規アップロード</button>
+      <button id="pasteUploadBtn" class="secondary">クリップボードから貼り付け</button>
+      <button id="resetBtn" class="secondary">リセット</button>
+    </div>
+    <div class="canvas-wrap source-dropzone" id="srcDropZone">
+      <canvas id="srcCanvas"></canvas>
+      <div id="srcHint" class="src-hint">ここをクリック / ドロップで画像をアップロード</div>
+    </div>
   </div>
 
   <div class="panel">

@@ -63,6 +63,33 @@ canvas{ max-width:100%; background:transparent; border-radius:4px; }
 .roughness-row{ margin-top:10px; }
 .effect-options{ margin-top:8px; }
 .edge-buttons{ margin-top:8px; }
+.upload-actions{ margin-bottom:8px; }
+.source-dropzone{
+  position:relative;
+  border:1px dashed #2f455e;
+  border-radius:6px;
+  cursor:pointer;
+}
+.source-dropzone.has-image{
+  cursor:default;
+}
+.source-dropzone.dragover{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(110, 168, 254, 0.25) inset;
+}
+.src-hint{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-size:0.95rem;
+  pointer-events:none;
+}
+.source-dropzone.has-image .src-hint{
+  display:none;
+}
 @media (max-width:640px){
   .edge-cross{
     grid-template-columns:1fr;

@@ -5,9 +5,12 @@ const cropBtn = document.getElementById('cropBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
+const newUploadBtn = document.getElementById('newUploadBtn');
+const pasteUploadBtn = document.getElementById('pasteUploadBtn');
 const roughnessInput = document.getElementById('roughness');
 const outlineEnabled = document.getElementById('outlineEnabled');
 const shadowEnabled = document.getElementById('shadowEnabled');
+const srcDropZone = document.getElementById('srcDropZone');
 
 const edgeTop = document.getElementById('edgeTop');
 const edgeRight = document.getElementById('edgeRight');
@@ -42,18 +45,31 @@ function setAllEdges(mode){
 allStraightBtn.addEventListener('click', () => setAllEdges('straight'));
 allTornBtn.addEventListener('click', () => setAllEdges('torn'));
 
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files[0];
-  if (!file) return;
+function revokeCurrentObjectUrl(){
   if (currentObjectUrl){
     URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl = null;
   }
-  const url = URL.createObjectURL(file);
+}
+
+function updateSourceState(){
+  srcDropZone.classList.toggle('has-image', Boolean(img));
+}
+
+function clearOutput(){
+  outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
+  downloadBtn.disabled = true;
+  copyBtn.disabled = true;
+}
+
+function loadImageFromBlob(blob){
+  revokeCurrentObjectUrl();
+  const url = URL.createObjectURL(blob);
   currentObjectUrl = url;
 
-  img = new Image();
-  img.onload = () => {
+  const nextImg = new Image();
+  nextImg.onload = () => {
+    img = nextImg;
     imgOX = PAD;
     imgOY = PAD;
 
@@ -65,21 +81,105 @@ fileInput.addEventListener('change', () => {
 
     rect = null;
     cropBtn.disabled = false;
-    downloadBtn.disabled = true;
-    copyBtn.disabled = true;
-    outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
+    clearOutput();
+    updateSourceState();
     if (currentObjectUrl === url){
       URL.revokeObjectURL(url);
       currentObjectUrl = null;
     }
   };
-  img.onerror = () => {
+  nextImg.onerror = () => {
+    alert('画像の読み込みに失敗しました');
+    updateSourceState();
     if (currentObjectUrl === url){
       URL.revokeObjectURL(url);
       currentObjectUrl = null;
     }
   };
-  img.src = url;
+  nextImg.src = url;
+}
+
+function loadImageFromFile(file){
+  if (!file || !file.type.startsWith('image/')) return;
+  loadImageFromBlob(file);
+}
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  loadImageFromFile(file);
+});
+
+newUploadBtn.addEventListener('click', () => {
+  fileInput.value = '';
+  fileInput.click();
+});
+
+srcDropZone.addEventListener('click', () => {
+  if (img) return;
+  fileInput.value = '';
+  fileInput.click();
+});
+
+function setDragState(on){
+  srcDropZone.classList.toggle('dragover', on);
+}
+
+srcDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  setDragState(true);
+});
+srcDropZone.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  setDragState(true);
+});
+srcDropZone.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  if (!srcDropZone.contains(e.relatedTarget)) setDragState(false);
+});
+srcDropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  setDragState(false);
+  const file = e.dataTransfer?.files?.[0];
+  if (file) loadImageFromFile(file);
+});
+
+async function uploadFromClipboard(){
+  if (!navigator.clipboard || !navigator.clipboard.read){
+    alert('このブラウザではクリップボード読み取りに対応していません');
+    return;
+  }
+  try{
+    const items = await navigator.clipboard.read();
+    for (const item of items){
+      const type = item.types.find((t) => t.startsWith('image/'));
+      if (type){
+        const blob = await item.getType(type);
+        loadImageFromBlob(blob);
+        return;
+      }
+    }
+    alert('クリップボードに画像がありません');
+  } catch (e){
+    alert('クリップボードからの読み取りに失敗しました');
+  }
+}
+
+pasteUploadBtn.addEventListener('click', () => {
+  uploadFromClipboard();
+});
+
+window.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items){
+    if (item.type.startsWith('image/')){
+      const blob = item.getAsFile();
+      if (blob) loadImageFromBlob(blob);
+      e.preventDefault();
+      return;
+    }
+  }
 });
 
 function clampToImageArea(x, y){
@@ -294,7 +394,9 @@ copyBtn.addEventListener('click', async () => {
 resetBtn.addEventListener('click', () => {
   rect = null;
   if (img) redrawSource();
-  outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
-  downloadBtn.disabled = true;
-  copyBtn.disabled = true;
+  clearOutput();
 });
+
+srcCanvas.width = 960;
+srcCanvas.height = 420;
+updateSourceState();
