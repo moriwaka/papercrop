@@ -1,0 +1,53 @@
+# paper crop
+
+画像を四角形で切り抜くためのシンプルな Web ツールです。上下左右それぞれのエッジを `直線` または `破れ` に設定できます。
+
+- Live: https://moriwaka.github.io/papercrop/
+- License: MIT
+
+## 主な機能
+
+- エッジ形状を上下左右で個別に切り替え
+- 破れ強度の調整
+- 輪郭線・ドロップシャドウの ON/OFF
+- 透過確認用のチェッカーボード背景プレビュー
+- 画像入力方法
+  - クリックしてアップロード
+  - ドラッグ&ドロップ
+  - クリップボード貼り付け
+- 出力
+  - PNG ダウンロード
+  - クリップボードへコピー
+- 言語切替（日本語 / English）
+
+## 使い方
+
+1. 画像をアップロードします（クリック / ドロップ / 貼り付け）。
+2. 元画像上でドラッグして切り抜き範囲を選択します。
+3. エッジ形状・破れ強度・輪郭線・シャドウを調整します。
+4. `Crop` を押して結果を確認します。
+5. `Download PNG` または `Copy to Clipboard` で保存します。
+
+## ローカルで実行
+
+ビルドは不要です。静的ファイルとしてそのまま動作します。
+
+```bash
+python3 -m http.server 8000
+```
+
+ブラウザで `http://localhost:8000` を開いてください。
+
+## 開発メモ
+
+- コアのマスク処理は `edge-mask.js`
+- UI とイベント処理は `app.js`
+- 回帰テスト
+
+```bash
+node --test tests/edge-mask.test.js
+```
+
+## English (Quick Summary)
+
+`paper crop` is a browser-based image cropper with per-edge shape control (straight or torn), adjustable roughness, optional outline/drop shadow, and transparent-background preview. It supports click upload, drag-and-drop, clipboard paste, PNG download, and clipboard copy.
