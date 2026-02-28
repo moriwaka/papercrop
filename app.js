@@ -145,19 +145,29 @@ function clampToImageArea(x, y){
   };
 }
 
+function getCanvasPoint(e){
+  const r = srcCanvas.getBoundingClientRect();
+  const scaleX = srcCanvas.width / r.width;
+  const scaleY = srcCanvas.height / r.height;
+  return {
+    x: (e.clientX - r.left) * scaleX,
+    y: (e.clientY - r.top) * scaleY
+  };
+}
+
 srcCanvas.addEventListener('mousedown', (e) => {
   if (!img) return;
   dragging = true;
-  const r = srcCanvas.getBoundingClientRect();
-  const p = clampToImageArea(e.clientX - r.left, e.clientY - r.top);
+  const pt = getCanvasPoint(e);
+  const p = clampToImageArea(pt.x, pt.y);
   startX = p.x;
   startY = p.y;
 });
 
 srcCanvas.addEventListener('mousemove', (e) => {
   if (!dragging || !img) return;
-  const r = srcCanvas.getBoundingClientRect();
-  const p = clampToImageArea(e.clientX - r.left, e.clientY - r.top);
+  const pt = getCanvasPoint(e);
+  const p = clampToImageArea(pt.x, pt.y);
   const x = p.x;
   const y = p.y;
 
