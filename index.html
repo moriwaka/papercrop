@@ -72,10 +72,11 @@
       <button id="pasteUploadBtn" class="secondary">クリップボードから貼り付け</button>
       <button id="resetBtn" class="secondary">リセット</button>
     </div>
-    <div class="canvas-wrap source-dropzone" id="srcDropZone">
+    <div class="canvas-wrap source-dropzone" id="srcDropZone" tabindex="0" role="button" aria-label="画像をアップロード">
       <canvas id="srcCanvas"></canvas>
       <div id="srcHint" class="src-hint">ここをクリック / ドロップで画像をアップロード</div>
     </div>
+    <p class="desc selection-hint" id="selectionHint">画像をアップロードして開始してください。</p>
   </div>
 
   <div class="panel">
@@ -84,12 +85,14 @@
       <button id="downloadBtn" class="secondary" disabled>Download PNG</button>
       <button id="copyBtn" class="secondary" disabled>Copy to clipboard</button>
     </div>
+    <p class="status-message" id="statusMessage" role="status" aria-live="polite" hidden></p>
     <div class="canvas-wrap preview-wrap" style="margin-top:12px;"><canvas id="outCanvas"></canvas></div>
   </div>
 
 </main>
 
 <script src="edge-mask.js"></script>
+<script src="ui-state.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

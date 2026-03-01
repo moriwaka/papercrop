@@ -24,6 +24,8 @@ const edgeCenterLabel = document.getElementById('edgeCenterLabel');
 const roughnessLabel = document.getElementById('roughnessLabel');
 const outlineLabel = document.getElementById('outlineLabel');
 const shadowLabel = document.getElementById('shadowLabel');
+const selectionHint = document.getElementById('selectionHint');
+const statusMessage = document.getElementById('statusMessage');
 
 const edgeTop = document.getElementById('edgeTop');
 const edgeRight = document.getElementById('edgeRight');
@@ -35,6 +37,7 @@ const allTornBtn = document.getElementById('allTornBtn');
 const srcCtx = srcCanvas.getContext('2d');
 const outCtx = outCanvas.getContext('2d');
 const { buildEdgeBounds, applyEdgeMask, findCornerIntersections, sample } = window.PaperCropEdgeMask;
+const { hasValidSelection, getSelectionText, getSelectionHintKey } = window.PaperCropUiState;
 const SHADOW_COLOR = 'rgba(0, 0, 0, 0.45)';
 const SHADOW_BLUR = 14;
 const SHADOW_OFFSET_X = 0;
@@ -42,6 +45,7 @@ const SHADOW_OFFSET_Y = 6;
 
 let img = null;
 let dragging = false;
+let activePointerId = null;
 let startX = 0, startY = 0;
 let rect = null;
 let currentObjectUrl = null;
@@ -68,16 +72,22 @@ const I18N = {
     pasteUploadBtn: 'クリップボードから貼り付け',
     resetBtn: 'リセット',
     srcHint: 'ここをクリック / ドロップで画像をアップロード',
-    cropBtn: 'Crop',
-    downloadBtn: 'Download PNG',
-    copyBtn: 'Copy to clipboard',
+    cropBtn: '切り抜き',
+    downloadBtn: 'PNGをダウンロード',
+    copyBtn: 'クリップボードにコピー',
     edgeStraight: '直線',
     edgeTorn: '紙を破った風',
     alertLoadFail: '画像の読み込みに失敗しました',
     alertClipboardUnsupported: 'このブラウザではクリップボード読み取りに対応していません',
     alertClipboardNoImage: 'クリップボードに画像がありません',
     alertClipboardReadFail: 'クリップボードからの読み取りに失敗しました',
-    alertClipboardCopyFail: 'クリップボードへのコピーに失敗しました'
+    alertClipboardCopyFail: 'クリップボードへのコピーに失敗しました',
+    statusCopySuccess: 'クリップボードにコピーしました',
+    hintNoImage: '画像をアップロードして開始してください。',
+    hintNeedSelection: '画像上をドラッグして切り抜き範囲を選択してください。',
+    hintSelectionTooSmall: '選択範囲が小さすぎます。もう少し大きく選択してください。',
+    hintReady: '切り抜き可能です。',
+    dropzoneAriaLabel: '画像をアップロード'
   },
   en: {
     langLabel: 'Language',
@@ -106,7 +116,13 @@ const I18N = {
     alertClipboardUnsupported: 'Clipboard read is not supported in this browser',
     alertClipboardNoImage: 'No image found in clipboard',
     alertClipboardReadFail: 'Failed to read from clipboard',
-    alertClipboardCopyFail: 'Failed to copy to clipboard'
+    alertClipboardCopyFail: 'Failed to copy to clipboard',
+    statusCopySuccess: 'Copied to clipboard',
+    hintNoImage: 'Upload an image to start.',
+    hintNeedSelection: 'Drag on the image to select a crop area.',
+    hintSelectionTooSmall: 'Selection is too small. Drag a larger area.',
+    hintReady: 'Ready to crop.',
+    dropzoneAriaLabel: 'Upload an image'
   }
 };
 
@@ -146,6 +162,8 @@ function applyLanguage(lang){
   cropBtn.textContent = t('cropBtn');
   downloadBtn.textContent = t('downloadBtn');
   copyBtn.textContent = t('copyBtn');
+  srcDropZone.setAttribute('aria-label', t('dropzoneAriaLabel'));
+  updateSelectionUi();
 
   for (const option of document.querySelectorAll('select option[value="straight"]')){
     option.textContent = t('edgeStraight');
@@ -193,6 +211,36 @@ function clearOutput(){
   copyBtn.disabled = true;
 }
 
+function showStatus(key, type, autoHideMs){
+  const text = t(key);
+  statusMessage.hidden = false;
+  statusMessage.textContent = text;
+  statusMessage.className = `status-message ${type || 'info'}`;
+  if (showStatus._timer){
+    clearTimeout(showStatus._timer);
+    showStatus._timer = null;
+  }
+  if (autoHideMs){
+    showStatus._timer = setTimeout(() => {
+      statusMessage.hidden = true;
+      statusMessage.textContent = '';
+      statusMessage.className = 'status-message';
+      showStatus._timer = null;
+    }, autoHideMs);
+  }
+}
+
+function updateSelectionUi(){
+  const key = getSelectionHintKey(Boolean(img), rect, 2);
+  let text = t(key);
+  const dims = getSelectionText(rect);
+  if (dims && hasValidSelection(rect, 2)){
+    text = `${text} (${dims})`;
+  }
+  selectionHint.textContent = text;
+  cropBtn.disabled = !img || !hasValidSelection(rect, 2);
+}
+
 function loadImageFromBlob(blob){
   revokeCurrentObjectUrl();
   const url = URL.createObjectURL(blob);
@@ -211,7 +259,7 @@ function loadImageFromBlob(blob){
     srcCtx.drawImage(img, imgOX, imgOY);
 
     rect = null;
-    cropBtn.disabled = false;
+    updateSelectionUi();
     clearOutput();
     updateSourceState();
     if (currentObjectUrl === url){
@@ -220,7 +268,7 @@ function loadImageFromBlob(blob){
     }
   };
   nextImg.onerror = () => {
-    alert(t('alertLoadFail'));
+    showStatus('alertLoadFail', 'error');
     updateSourceState();
     if (currentObjectUrl === url){
       URL.revokeObjectURL(url);
@@ -252,6 +300,14 @@ srcDropZone.addEventListener('click', () => {
   fileInput.click();
 });
 
+srcDropZone.addEventListener('keydown', (e) => {
+  if (img) return;
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  fileInput.value = '';
+  fileInput.click();
+});
+
 function setDragState(on){
   srcDropZone.classList.toggle('dragover', on);
 }
@@ -277,7 +333,7 @@ srcDropZone.addEventListener('drop', (e) => {
 
 async function uploadFromClipboard(){
   if (!navigator.clipboard || !navigator.clipboard.read){
-    alert(t('alertClipboardUnsupported'));
+    showStatus('alertClipboardUnsupported', 'error');
     return;
   }
   try{
@@ -290,9 +346,9 @@ async function uploadFromClipboard(){
         return;
       }
     }
-    alert(t('alertClipboardNoImage'));
+    showStatus('alertClipboardNoImage', 'error');
   } catch (e){
-    alert(t('alertClipboardReadFail'));
+    showStatus('alertClipboardReadFail', 'error');
   }
 }
 
@@ -334,17 +390,22 @@ function getCanvasPoint(e){
   };
 }
 
-srcCanvas.addEventListener('mousedown', (e) => {
-  if (!img) return;
+srcCanvas.addEventListener('pointerdown', (e) => {
+  if (!img || dragging) return;
   dragging = true;
+  activePointerId = e.pointerId;
+  srcCanvas.setPointerCapture(e.pointerId);
   const pt = getCanvasPoint(e);
   const p = clampToImageArea(pt.x, pt.y);
   startX = p.x;
   startY = p.y;
+  rect = { x: startX, y: startY, w: 0, h: 0 };
+  redrawSource();
+  updateSelectionUi();
 });
 
-srcCanvas.addEventListener('mousemove', (e) => {
-  if (!dragging || !img) return;
+srcCanvas.addEventListener('pointermove', (e) => {
+  if (!dragging || !img || e.pointerId !== activePointerId) return;
   const pt = getCanvasPoint(e);
   const p = clampToImageArea(pt.x, pt.y);
   const x = p.x;
@@ -357,10 +418,18 @@ srcCanvas.addEventListener('mousemove', (e) => {
     h: Math.abs(y - startY)
   };
   redrawSource();
+  updateSelectionUi();
 });
 
-srcCanvas.addEventListener('mouseup', () => dragging = false);
-srcCanvas.addEventListener('mouseleave', () => dragging = false);
+function releasePointerDrag(e){
+  if (!dragging || e.pointerId !== activePointerId) return;
+  dragging = false;
+  activePointerId = null;
+  updateSelectionUi();
+}
+
+srcCanvas.addEventListener('pointerup', releasePointerDrag);
+srcCanvas.addEventListener('pointercancel', releasePointerDrag);
 
 function redrawSource(){
   if (!img) return;
@@ -373,6 +442,22 @@ function redrawSource(){
     srcCtx.setLineDash([6,4]);
     srcCtx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     srcCtx.setLineDash([]);
+    const dims = getSelectionText(rect);
+    if (dims){
+      srcCtx.font = '12px sans-serif';
+      const labelPadding = 6;
+      const metrics = srcCtx.measureText(dims);
+      const bw = metrics.width + labelPadding * 2;
+      const bh = 20;
+      let bx = rect.x;
+      let by = rect.y - bh - 4;
+      if (by < 0) by = rect.y + 4;
+      if (bx + bw > srcCanvas.width) bx = srcCanvas.width - bw - 2;
+      srcCtx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      srcCtx.fillRect(bx, by, bw, bh);
+      srcCtx.fillStyle = '#ffffff';
+      srcCtx.fillText(dims, bx + labelPadding, by + 14);
+    }
   }
 }
 
@@ -512,12 +597,13 @@ copyBtn.addEventListener('click', async () => {
   outCanvas.toBlob(async (blob) => {
     try{
       if (!blob){
-        alert(t('alertClipboardCopyFail'));
+        showStatus('alertClipboardCopyFail', 'error');
         return;
       }
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showStatus('statusCopySuccess', 'success', 3000);
     } catch (e){
-      alert(t('alertClipboardCopyFail'));
+      showStatus('alertClipboardCopyFail', 'error');
     }
   });
 });
@@ -526,12 +612,14 @@ resetBtn.addEventListener('click', () => {
   rect = null;
   if (img) redrawSource();
   clearOutput();
+  updateSelectionUi();
 });
 
 srcCanvas.width = 960;
 srcCanvas.height = 420;
 updateSourceState();
 applyLanguage(getInitialLanguage());
+updateSelectionUi();
 langSelect.addEventListener('change', () => {
   applyLanguage(langSelect.value);
 });
