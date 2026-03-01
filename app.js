@@ -7,7 +7,6 @@ const copyBtn = document.getElementById('copyBtn');
 const resetBtn = document.getElementById('resetBtn');
 const newUploadBtn = document.getElementById('newUploadBtn');
 const pasteUploadBtn = document.getElementById('pasteUploadBtn');
-const langSelect = document.getElementById('langSelect');
 const roughnessInput = document.getElementById('roughness');
 const outlineEnabled = document.getElementById('outlineEnabled');
 const shadowEnabled = document.getElementById('shadowEnabled');
@@ -15,7 +14,6 @@ const srcDropZone = document.getElementById('srcDropZone');
 const srcHint = document.getElementById('srcHint');
 const mainDesc = document.getElementById('mainDesc');
 const sourceDesc = document.getElementById('sourceDesc');
-const langLabel = document.getElementById('langLabel');
 const edgeTopLabel = document.getElementById('edgeTopLabel');
 const edgeRightLabel = document.getElementById('edgeRightLabel');
 const edgeBottomLabel = document.getElementById('edgeBottomLabel');
@@ -49,13 +47,12 @@ let activePointerId = null;
 let startX = 0, startY = 0;
 let rect = null;
 let currentObjectUrl = null;
-let currentLang = 'ja';
+let currentLang = 'en';
 
 const PAD = 32;           // 画像まわりの余白(px)
 let imgOX = 0, imgOY = 0; // 画像の描画オフセット
 const I18N = {
   ja: {
-    langLabel: '言語',
     mainDesc: '画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。',
     edgeTopLabel: '上エッジ',
     edgeRightLabel: '右エッジ',
@@ -87,10 +84,10 @@ const I18N = {
     hintNeedSelection: '画像上をドラッグして切り抜き範囲を選択してください。',
     hintSelectionTooSmall: '選択範囲が小さすぎます。もう少し大きく選択してください。',
     hintReady: '切り抜き可能です。',
-    dropzoneAriaLabel: '画像をアップロード'
+    dropzoneAriaLabel: '画像をアップロード',
+    alertNeedSelection: '切り抜き範囲を先に選択してください。'
   },
   en: {
-    langLabel: 'Language',
     mainDesc: 'A tool to crop images into rectangular regions with per-edge shape control.',
     edgeTopLabel: 'Top Edge',
     edgeRightLabel: 'Right Edge',
@@ -122,7 +119,8 @@ const I18N = {
     hintNeedSelection: 'Drag on the image to select a crop area.',
     hintSelectionTooSmall: 'Selection is too small. Drag a larger area.',
     hintReady: 'Ready to crop.',
-    dropzoneAriaLabel: 'Upload an image'
+    dropzoneAriaLabel: 'Upload an image',
+    alertNeedSelection: 'Please select a crop region first.'
   }
 };
 
@@ -135,14 +133,6 @@ function applyLanguage(lang){
   if (!I18N[lang]) lang = 'ja';
   currentLang = lang;
   document.documentElement.lang = lang;
-  langSelect.value = lang;
-  try {
-    localStorage.setItem('papercrop_lang', lang);
-  } catch (e){
-    // ignore storage errors
-  }
-
-  langLabel.textContent = t('langLabel');
   mainDesc.textContent = t('mainDesc');
   edgeTopLabel.textContent = t('edgeTopLabel');
   edgeRightLabel.textContent = t('edgeRightLabel');
@@ -174,14 +164,12 @@ function applyLanguage(lang){
 }
 
 function getInitialLanguage(){
-  try {
-    const saved = localStorage.getItem('papercrop_lang');
-    if (saved && I18N[saved]) return saved;
-  } catch (e){
-    // ignore storage errors
+  const preferred = navigator.languages && navigator.languages.length
+    ? navigator.languages
+    : [navigator.language || ''];
+  for (const lang of preferred){
+    if (String(lang).toLowerCase().startsWith('ja')) return 'ja';
   }
-  const navLang = (navigator.language || '').toLowerCase();
-  if (navLang.startsWith('ja')) return 'ja';
   return 'en';
 }
 
@@ -238,7 +226,7 @@ function updateSelectionUi(){
     text = `${text} (${dims})`;
   }
   selectionHint.textContent = text;
-  cropBtn.disabled = !img || !hasValidSelection(rect, 2);
+  cropBtn.disabled = !img;
 }
 
 function loadImageFromBlob(blob){
@@ -524,7 +512,10 @@ function computeOutputInsets(withShadow, withOutline){
 }
 
 cropBtn.addEventListener('click', () => {
-  if (!rect || rect.w < 2 || rect.h < 2) return;
+  if (!hasValidSelection(rect, 2)) {
+    window.alert(t('alertNeedSelection'));
+    return;
+  }
 
   const w = Math.round(rect.w);
   const h = Math.round(rect.h);
@@ -620,6 +611,3 @@ srcCanvas.height = 420;
 updateSourceState();
 applyLanguage(getInitialLanguage());
 updateSelectionUi();
-langSelect.addEventListener('change', () => {
-  applyLanguage(langSelect.value);
-});

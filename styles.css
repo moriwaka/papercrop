@@ -70,7 +70,6 @@ canvas{ max-width:100%; background:transparent; border-radius:4px; }
 .roughness-row{ margin-top:10px; }
 .effect-options{ margin-top:8px; }
 .edge-buttons{ margin-top:8px; }
-.lang-row{ margin-bottom:8px; }
 .upload-actions{ margin-bottom:8px; }
 .source-dropzone{
   position:relative;
