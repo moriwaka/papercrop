@@ -47,3 +47,9 @@ Open `http://localhost:8000` in your browser.
 ```bash
 node --test
 ```
+
+- Browser end-to-end test:
+
+```bash
+npx playwright test
+```
