@@ -47,6 +47,7 @@ let activePointerId = null;
 let startX = 0, startY = 0;
 let rect = null;
 let currentObjectUrl = null;
+let currentLoadToken = 0;
 let currentLang = 'en';
 
 const PAD = 32;           // 画像まわりの余白(px)
@@ -219,23 +220,29 @@ function showStatus(key, type, autoHideMs){
 }
 
 function updateSelectionUi(){
+  const canCrop = hasValidSelection(rect, 2);
   const key = getSelectionHintKey(Boolean(img), rect, 2);
   let text = t(key);
   const dims = getSelectionText(rect);
-  if (dims && hasValidSelection(rect, 2)){
+  if (dims && canCrop){
     text = `${text} (${dims})`;
   }
   selectionHint.textContent = text;
-  cropBtn.disabled = !img;
+  cropBtn.disabled = !canCrop;
 }
 
 function loadImageFromBlob(blob){
   revokeCurrentObjectUrl();
   const url = URL.createObjectURL(blob);
+  const loadToken = ++currentLoadToken;
   currentObjectUrl = url;
 
   const nextImg = new Image();
   nextImg.onload = () => {
+    if (loadToken !== currentLoadToken) {
+      URL.revokeObjectURL(url);
+      return;
+    }
     img = nextImg;
     imgOX = PAD;
     imgOY = PAD;
@@ -256,6 +263,10 @@ function loadImageFromBlob(blob){
     }
   };
   nextImg.onerror = () => {
+    if (loadToken !== currentLoadToken) {
+      URL.revokeObjectURL(url);
+      return;
+    }
     showStatus('alertLoadFail', 'error');
     updateSourceState();
     if (currentObjectUrl === url){
@@ -611,3 +622,30 @@ srcCanvas.height = 420;
 updateSourceState();
 applyLanguage(getInitialLanguage());
 updateSelectionUi();
+
+if (typeof module !== 'undefined' && module.exports){
+  module.exports = {
+    applyLanguage,
+    getInitialLanguage,
+    updateSelectionUi,
+    loadImageFromBlob,
+    uploadFromClipboard,
+    setAllEdges,
+    _getState(){
+      return {
+        img,
+        rect,
+        currentLang,
+        currentLoadToken,
+        currentObjectUrl
+      };
+    },
+    _setRect(nextRect){
+      rect = nextRect;
+    },
+    _setImage(nextImg){
+      img = nextImg;
+      updateSourceState();
+    }
+  };
+}

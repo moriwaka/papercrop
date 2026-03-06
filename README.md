@@ -45,5 +45,5 @@ Open `http://localhost:8000` in your browser.
 - Regression test:
 
 ```bash
-node --test tests/edge-mask.test.js
+node --test
 ```
