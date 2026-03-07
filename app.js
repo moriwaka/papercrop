@@ -60,7 +60,7 @@ const I18N = {
     edgeBottomLabel: '下エッジ',
     edgeLeftLabel: '左エッジ',
     edgeCenterLabel: 'エッジ形状',
-    roughnessLabel: '破れ強度',
+    roughnessLabel: 'エッジ強度',
     outlineLabel: '輪郭線',
     shadowLabel: 'ドロップシャドウ',
     allStraightBtn: '全て直線',
@@ -75,6 +75,9 @@ const I18N = {
     copyBtn: 'クリップボードにコピー',
     edgeStraight: '直線',
     edgeTorn: '紙を破った風',
+    edgeDeckle: '手漉き紙風',
+    edgeWavy: 'たわみ紙風',
+    edgeStamp: '半券ミシン目風',
     alertLoadFail: '画像の読み込みに失敗しました',
     alertClipboardUnsupported: 'このブラウザではクリップボード読み取りに対応していません',
     alertClipboardNoImage: 'クリップボードに画像がありません',
@@ -95,7 +98,7 @@ const I18N = {
     edgeBottomLabel: 'Bottom Edge',
     edgeLeftLabel: 'Left Edge',
     edgeCenterLabel: 'Edge Shape',
-    roughnessLabel: 'Tear Roughness',
+    roughnessLabel: 'Edge Intensity',
     outlineLabel: 'Outline',
     shadowLabel: 'Drop Shadow',
     allStraightBtn: 'All Straight',
@@ -110,6 +113,9 @@ const I18N = {
     copyBtn: 'Copy to Clipboard',
     edgeStraight: 'Straight',
     edgeTorn: 'Torn Paper',
+    edgeDeckle: 'Deckle Edge',
+    edgeWavy: 'Wavy Paper',
+    edgeStamp: 'Ticket Stub',
     alertLoadFail: 'Failed to load image',
     alertClipboardUnsupported: 'Clipboard read is not supported in this browser',
     alertClipboardNoImage: 'No image found in clipboard',
@@ -156,11 +162,17 @@ function applyLanguage(lang){
   srcDropZone.setAttribute('aria-label', t('dropzoneAriaLabel'));
   updateSelectionUi();
 
-  for (const option of document.querySelectorAll('select option[value="straight"]')){
-    option.textContent = t('edgeStraight');
-  }
-  for (const option of document.querySelectorAll('select option[value="torn"]')){
-    option.textContent = t('edgeTorn');
+  const edgeOptionLabels = {
+    straight: 'edgeStraight',
+    torn: 'edgeTorn',
+    deckle: 'edgeDeckle',
+    wavy: 'edgeWavy',
+    stamp: 'edgeStamp'
+  };
+  for (const [value, key] of Object.entries(edgeOptionLabels)){
+    for (const option of document.querySelectorAll(`select option[value="${value}"]`)){
+      option.textContent = t(key);
+    }
   }
 }
 
