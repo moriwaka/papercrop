@@ -1,14 +1,14 @@
 # paper crop
 
-A lightweight browser tool for cropping images with per-edge shape control. Each side (top, right, bottom, left) can be set to either `Straight` or `Torn`.
+A lightweight browser tool for cropping images with per-edge shape control. Each side (top, right, bottom, left) can be set independently to `Straight`, `Torn Paper`, `Deckle Edge`, `Wavy Paper`, or `Ticket Stub`.
 
 - Live: https://moriwaka.github.io/papercrop/
 - License: MIT
 
 ## Features
 
-- Per-edge shape selection (straight/torn)
-- Adjustable tear roughness
+- Per-edge shape selection across five edge modes
+- Adjustable edge intensity
 - Optional outline and drop shadow
 - Checkerboard preview background for transparency checks
 - Image input methods:
@@ -42,10 +42,10 @@ Open `http://localhost:8000` in your browser.
 
 - Core masking logic: `edge-mask.js`
 - UI and event handling: `app.js`
-- Regression test:
+- Regression tests:
 
 ```bash
-node --test
+node --test tests/edge-mask.test.js tests/ui-state.test.js tests/app.test.js
 ```
 
 - Browser end-to-end test:

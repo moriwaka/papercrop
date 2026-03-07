@@ -59,12 +59,14 @@ function createContextStub(){
     lineTo(){},
     closePath(){},
     stroke(){},
+    fill(){},
     save(){},
-    restore(){}
+    restore(){},
+    translate(){}
   };
 }
 
-function createElement(id){
+function createElement(id, extras = {}){
   const target = createEventTarget();
   const element = {
     id,
@@ -81,6 +83,7 @@ function createElement(id){
     classList: createClassList(),
     attributes: {},
     options: [],
+    dataset: {},
     clickCalls: 0,
     setAttribute(name, value){
       this.attributes[name] = value;
@@ -107,9 +110,12 @@ function createElement(id){
     toBlob(callback){
       callback({ type: 'image/png' });
     },
+    querySelector(){
+      return null;
+    },
     ...target
   };
-  return element;
+  return Object.assign(element, extras);
 }
 
 function createHarness(options = {}){
@@ -118,22 +124,59 @@ function createHarness(options = {}){
     'resetBtn', 'newUploadBtn', 'pasteUploadBtn', 'roughness', 'outlineEnabled',
     'shadowEnabled', 'srcDropZone', 'srcHint', 'mainDesc', 'sourceDesc',
     'edgeTopLabel', 'edgeRightLabel', 'edgeBottomLabel', 'edgeLeftLabel',
-    'edgeCenterLabel', 'roughnessLabel', 'outlineLabel', 'shadowLabel',
-    'selectionHint', 'statusMessage', 'edgeTop', 'edgeRight', 'edgeBottom',
-    'edgeLeft', 'allStraightBtn', 'allTornBtn'
+    'edgeCenterLabel', 'edgeHelp', 'applyAllEdgesBtn', 'selectedEdgeTitle',
+    'selectedEdgeName', 'selectedEdgeDesc', 'roughnessLabel', 'outlineLabel',
+    'shadowLabel', 'selectionHint', 'statusMessage', 'edgeTop', 'edgeRight',
+    'edgeBottom', 'edgeLeft'
   ];
   const elements = Object.fromEntries(elementIds.map((id) => [id, createElement(id)]));
-  elements.edgeTop.options = [{ value: 'straight' }, { value: 'torn' }];
-  elements.edgeRight.options = [{ value: 'straight' }, { value: 'torn' }];
-  elements.edgeBottom.options = [{ value: 'straight' }, { value: 'torn' }];
-  elements.edgeLeft.options = [{ value: 'straight' }, { value: 'torn' }];
+  const modes = ['straight', 'torn', 'deckle', 'wavy', 'stamp'];
+  elements.edgeTop.options = modes.map((value) => ({ value, textContent: '' }));
+  elements.edgeRight.options = modes.map((value) => ({ value, textContent: '' }));
+  elements.edgeBottom.options = modes.map((value) => ({ value, textContent: '' }));
+  elements.edgeLeft.options = modes.map((value) => ({ value, textContent: '' }));
+  elements.edgeTop.value = 'straight';
+  elements.edgeRight.value = 'straight';
+  elements.edgeBottom.value = 'straight';
+  elements.edgeLeft.value = 'straight';
   elements.roughness.value = '8';
+  elements.roughness.min = '2';
+  elements.roughness.max = '20';
   elements.outlineEnabled.checked = true;
   elements.shadowEnabled.checked = true;
 
   const revokedUrls = [];
   const createdUrls = [];
   const pendingImages = [];
+  const createdAnchors = [];
+
+  const edgeValueEls = {
+    top: createElement('edgeValueTop'),
+    right: createElement('edgeValueRight'),
+    bottom: createElement('edgeValueBottom'),
+    left: createElement('edgeValueLeft')
+  };
+  const i18nEls = {};
+  for (const key of [
+    'edgeStraight', 'edgeStraightDesc', 'edgeTorn', 'edgeTornDesc',
+    'edgeDeckle', 'edgeDeckleDesc', 'edgeWavy', 'edgeWavyDesc',
+    'edgeStamp', 'edgeStampDesc'
+  ]){
+    i18nEls[key] = createElement(key, { dataset: { i18n: key } });
+  }
+
+  const edgeCards = modes.map((mode) => {
+    const canvas = createElement(`${mode}Canvas`, { width: 140, height: 88 });
+    return createElement(`${mode}Card`, {
+      dataset: { mode },
+      querySelector(selector){
+        return selector === 'canvas' ? canvas : null;
+      }
+    });
+  });
+  const edgeAssignButtons = ['top', 'right', 'bottom', 'left'].map((edge) =>
+    createElement(`${edge}Assign`, { dataset: { edge } })
+  );
 
   class FakeImage {
     constructor(){
@@ -158,18 +201,32 @@ function createHarness(options = {}){
     getElementById(id){
       return elements[id];
     },
-    querySelectorAll(selector){
-      if (selector === 'select option[value="straight"]'){
-        return ['edgeTop', 'edgeRight', 'edgeBottom', 'edgeLeft'].map((id) => elements[id].options[0]);
+    querySelector(selector){
+      const edgeValueMatch = selector.match(/^\[data-edge-value="(top|right|bottom|left)"\]$/);
+      if (edgeValueMatch){
+        return edgeValueEls[edgeValueMatch[1]];
       }
-      if (selector === 'select option[value="torn"]'){
-        return ['edgeTop', 'edgeRight', 'edgeBottom', 'edgeLeft'].map((id) => elements[id].options[1]);
+      return null;
+    },
+    querySelectorAll(selector){
+      if (selector === '.edge-card'){
+        return edgeCards;
+      }
+      if (selector === '.edge-assign'){
+        return edgeAssignButtons;
+      }
+      if (selector === '[data-i18n]'){
+        return Object.values(i18nEls);
       }
       return [];
     },
     createElement(tag){
       if (tag === 'canvas') return createElement(`dynamic-${tag}`);
-      if (tag === 'a') return createElement(`dynamic-${tag}`);
+      if (tag === 'a'){
+        const anchor = createElement(`dynamic-${tag}`);
+        createdAnchors.push(anchor);
+        return anchor;
+      }
       return createElement(`dynamic-${tag}`);
     }
   };
@@ -286,12 +343,17 @@ function createHarness(options = {}){
   return {
     app,
     elements,
+    edgeCards,
+    edgeAssignButtons,
+    edgeValueEls,
+    i18nEls,
     window,
     document,
     navigator,
     pendingImages,
     revokedUrls,
     createdUrls,
+    createdAnchors,
     cleanup
   };
 }
@@ -319,15 +381,36 @@ test('updateSelectionUi keeps crop disabled until selection is valid', () => {
   }
 });
 
-test('applyLanguage updates visible labels and select option text', () => {
+test('applyLanguage updates visible labels and edge gallery text', () => {
   const harness = createHarness({ languages: ['ja-JP'] });
   try{
     harness.app.applyLanguage('en');
     assert.equal(harness.document.documentElement.lang, 'en');
     assert.equal(harness.elements.cropBtn.textContent, 'Crop');
     assert.equal(harness.elements.srcDropZone.getAttribute('aria-label'), 'Upload an image');
-    assert.equal(harness.elements.edgeTop.options[0].textContent, 'Straight');
-    assert.equal(harness.elements.edgeTop.options[1].textContent, 'Torn Paper');
+    assert.equal(harness.elements.applyAllEdgesBtn.textContent, 'Apply to All Edges');
+    assert.equal(harness.i18nEls.edgeStraight.textContent, 'Straight');
+    assert.equal(harness.i18nEls.edgeStamp.textContent, 'Ticket Stub');
+    assert.equal(harness.edgeValueEls.top.textContent, 'Straight');
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('download uses a png filename even when the source extension differs', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'source' }, 'photo.jpg');
+    const [image] = harness.pendingImages;
+    image.width = 120;
+    image.height = 80;
+    image.onload();
+
+    harness.elements.downloadBtn.dispatch('click');
+
+    assert.equal(harness.createdAnchors.length, 1);
+    assert.equal(harness.createdAnchors[0].download, 'photo-papercrop.png');
+    assert.equal(harness.createdAnchors[0].href, 'data:image/png;base64,');
   } finally {
     harness.cleanup();
   }

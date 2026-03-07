@@ -256,13 +256,12 @@ function buildDownloadFilename(){
   }
 
   const lastDot = currentSourceFilename.lastIndexOf('.');
-  if (lastDot <= 0 || lastDot === currentSourceFilename.length - 1){
+  if (lastDot <= 0){
     return `${currentSourceFilename}-papercrop.png`;
   }
 
   const basename = currentSourceFilename.slice(0, lastDot);
-  const ext = currentSourceFilename.slice(lastDot + 1);
-  return `${basename}-papercrop.${ext}`;
+  return `${basename}-papercrop.png`;
 }
 
 function applyLanguage(lang){
