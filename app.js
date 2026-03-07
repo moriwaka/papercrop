@@ -199,6 +199,8 @@ function saveEdgeSettings(){
     window.localStorage.setItem(EDGE_SETTINGS_STORAGE_KEY, JSON.stringify({
       selectedEdgeMode,
       roughness: Number(roughnessInput.value),
+      outlineEnabled: outlineEnabled.checked,
+      shadowEnabled: shadowEnabled.checked,
       edges: getEdgeValues()
     }));
   } catch (e){
@@ -235,6 +237,13 @@ function restoreEdgeSettings(){
   const max = Number(roughnessInput.max);
   if (Number.isFinite(roughness)){
     roughnessInput.value = String(Math.min(Math.max(roughness, min), max));
+  }
+
+  if (typeof stored.outlineEnabled === 'boolean'){
+    outlineEnabled.checked = stored.outlineEnabled;
+  }
+  if (typeof stored.shadowEnabled === 'boolean'){
+    shadowEnabled.checked = stored.shadowEnabled;
   }
 }
 
@@ -836,6 +845,8 @@ roughnessInput.addEventListener('input', () => {
 });
 outlineEnabled.addEventListener('change', renderOutputPreview);
 shadowEnabled.addEventListener('change', renderOutputPreview);
+outlineEnabled.addEventListener('change', saveEdgeSettings);
+shadowEnabled.addEventListener('change', saveEdgeSettings);
 
 srcCanvas.width = 960;
 srcCanvas.height = 420;
