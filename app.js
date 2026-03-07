@@ -299,6 +299,7 @@ function setAllEdges(mode){
   edgeLeft.value = mode;
   updateEdgeUi();
   saveEdgeSettings();
+  if (img) redrawSource();
   renderOutputPreview();
 }
 
@@ -336,6 +337,7 @@ function applySelectedModeToEdge(edge){
   input.value = selectedEdgeMode;
   updateEdgeUi();
   saveEdgeSettings();
+  if (img) redrawSource();
   renderOutputPreview();
 }
 
@@ -654,6 +656,43 @@ function getCanvasPoint(e){
   };
 }
 
+function getCanvasDisplayScale(canvas){
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height){
+    return { x: 1, y: 1, max: 1 };
+  }
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: scaleX,
+    y: scaleY,
+    max: Math.max(scaleX, scaleY)
+  };
+}
+
+function getGuaranteedVisibleRect(){
+  if (!hasValidSelection(rect, 2)) return null;
+
+  const w = Math.round(rect.w);
+  const h = Math.round(rect.h);
+  const bounds = buildEdgeBounds(w, h, Number(roughnessInput.value), getEdgeValues());
+  const safeTop = Math.max(...bounds.top);
+  const safeBottom = Math.min(...bounds.bottom);
+  const safeLeft = Math.max(...bounds.left);
+  const safeRight = Math.min(...bounds.right);
+
+  if (safeRight <= safeLeft || safeBottom <= safeTop){
+    return null;
+  }
+
+  return {
+    x: rect.x + safeLeft,
+    y: rect.y + safeTop,
+    w: safeRight - safeLeft,
+    h: safeBottom - safeTop
+  };
+}
+
 srcCanvas.addEventListener('pointerdown', (e) => {
   if (!img || dragging) return;
   dragging = true;
@@ -701,26 +740,45 @@ function redrawSource(){
   srcCtx.drawImage(img, imgOX, imgOY);
 
   if (rect){
+    const displayScale = getCanvasDisplayScale(srcCanvas);
+    const strokeWidth = Math.min(8, Math.max(2, displayScale.max * 2));
+    const dashOn = Math.max(6, displayScale.max * 6);
+    const dashOff = Math.max(4, displayScale.max * 4);
+    const fontSize = Math.min(28, Math.max(12, displayScale.max * 12));
+    const labelPadding = Math.max(6, displayScale.max * 6);
+    const labelHeight = Math.max(20, Math.round(fontSize * 1.55));
+    const labelOffset = Math.max(4, displayScale.max * 4);
+
     srcCtx.strokeStyle = 'rgba(0, 255, 0, 0.9)'; // 緑の点線
-    srcCtx.lineWidth = 2;
-    srcCtx.setLineDash([6,4]);
+    srcCtx.lineWidth = strokeWidth;
+    srcCtx.setLineDash([dashOn, dashOff]);
     srcCtx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     srcCtx.setLineDash([]);
+    const safeRect = getGuaranteedVisibleRect();
+    if (safeRect){
+      srcCtx.save();
+      srcCtx.fillStyle = 'rgba(255, 215, 0, 0.12)';
+      srcCtx.strokeStyle = 'rgba(255, 215, 0, 0.95)';
+      srcCtx.lineWidth = Math.max(1.5, strokeWidth * 0.8);
+      srcCtx.fillRect(safeRect.x, safeRect.y, safeRect.w, safeRect.h);
+      srcCtx.strokeRect(safeRect.x, safeRect.y, safeRect.w, safeRect.h);
+      srcCtx.restore();
+    }
     const dims = getSelectionText(rect);
     if (dims){
-      srcCtx.font = '12px sans-serif';
-      const labelPadding = 6;
+      srcCtx.font = `${fontSize}px sans-serif`;
       const metrics = srcCtx.measureText(dims);
       const bw = metrics.width + labelPadding * 2;
-      const bh = 20;
+      const bh = labelHeight;
       let bx = rect.x;
-      let by = rect.y - bh - 4;
-      if (by < 0) by = rect.y + 4;
+      let by = rect.y - bh - labelOffset;
+      if (by < 0) by = rect.y + labelOffset;
       if (bx + bw > srcCanvas.width) bx = srcCanvas.width - bw - 2;
       srcCtx.fillStyle = 'rgba(0, 0, 0, 0.75)';
       srcCtx.fillRect(bx, by, bw, bh);
       srcCtx.fillStyle = '#ffffff';
-      srcCtx.fillText(dims, bx + labelPadding, by + 14);
+      srcCtx.textBaseline = 'middle';
+      srcCtx.fillText(dims, bx + labelPadding, by + bh * 0.5);
     }
   }
 }
@@ -842,6 +900,7 @@ for (const button of edgeAssignButtons){
 
 roughnessInput.addEventListener('input', () => {
   saveEdgeSettings();
+  if (img) redrawSource();
   renderEdgeGalleryPreviews();
   renderOutputPreview();
 });
@@ -849,6 +908,9 @@ outlineEnabled.addEventListener('change', renderOutputPreview);
 shadowEnabled.addEventListener('change', renderOutputPreview);
 outlineEnabled.addEventListener('change', saveEdgeSettings);
 shadowEnabled.addEventListener('change', saveEdgeSettings);
+window.addEventListener('resize', () => {
+  if (img) redrawSource();
+});
 
 srcCanvas.width = 960;
 srcCanvas.height = 420;
