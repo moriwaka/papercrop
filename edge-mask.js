@@ -191,11 +191,36 @@
     return buildStampProfile(lengthPx, rough, Math.max(1, baseAmplitude * 0.7), seed + 71);
   }
 
+  function normalizeInsetProfile(profile, baseInset, maxInset){
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (let i = 0; i < profile.length; i++){
+      const raw = baseInset + profile[i];
+      min = Math.min(min, raw);
+      max = Math.max(max, raw);
+    }
+
+    const span = max - min;
+    const scale = span > maxInset && span > 0 ? (maxInset / span) : 1;
+    const out = new Array(profile.length);
+
+    for (let i = 0; i < profile.length; i++){
+      const raw = baseInset + profile[i];
+      out[i] = clamp((raw - min) * scale, 0, maxInset);
+    }
+
+    return out;
+  }
+
   function buildSingleEdge(lengthPx, rough, mode, baseInset, maxInset, seed, axisAmpMul, invert){
     const profile = buildModeProfile(lengthPx, rough, mode, seed, axisAmpMul);
     const out = new Array(lengthPx + 1);
+    const insetProfile = mode === 'torn'
+      ? normalizeInsetProfile(profile, baseInset, maxInset)
+      : null;
     for (let i = 0; i <= lengthPx; i++){
-      const value = clamp(baseInset + profile[i], 0, maxInset);
+      const value = insetProfile ? insetProfile[i] : clamp(baseInset + profile[i], 0, maxInset);
       out[i] = invert ? invert - value : value;
     }
     return out;

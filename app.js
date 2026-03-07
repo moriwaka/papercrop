@@ -19,18 +19,29 @@ const edgeRightLabel = document.getElementById('edgeRightLabel');
 const edgeBottomLabel = document.getElementById('edgeBottomLabel');
 const edgeLeftLabel = document.getElementById('edgeLeftLabel');
 const edgeCenterLabel = document.getElementById('edgeCenterLabel');
+const edgeHelp = document.getElementById('edgeHelp');
 const roughnessLabel = document.getElementById('roughnessLabel');
 const outlineLabel = document.getElementById('outlineLabel');
 const shadowLabel = document.getElementById('shadowLabel');
 const selectionHint = document.getElementById('selectionHint');
 const statusMessage = document.getElementById('statusMessage');
+const applyAllEdgesBtn = document.getElementById('applyAllEdgesBtn');
+const selectedEdgeTitle = document.getElementById('selectedEdgeTitle');
+const selectedEdgeName = document.getElementById('selectedEdgeName');
+const selectedEdgeDesc = document.getElementById('selectedEdgeDesc');
 
 const edgeTop = document.getElementById('edgeTop');
 const edgeRight = document.getElementById('edgeRight');
 const edgeBottom = document.getElementById('edgeBottom');
 const edgeLeft = document.getElementById('edgeLeft');
-const allStraightBtn = document.getElementById('allStraightBtn');
-const allTornBtn = document.getElementById('allTornBtn');
+const edgeCards = Array.from(document.querySelectorAll('.edge-card'));
+const edgeAssignButtons = Array.from(document.querySelectorAll('.edge-assign'));
+const edgeValueEls = {
+  top: document.querySelector('[data-edge-value="top"]'),
+  right: document.querySelector('[data-edge-value="right"]'),
+  bottom: document.querySelector('[data-edge-value="bottom"]'),
+  left: document.querySelector('[data-edge-value="left"]')
+};
 
 const srcCtx = srcCanvas.getContext('2d');
 const outCtx = outCanvas.getContext('2d');
@@ -49,9 +60,17 @@ let rect = null;
 let currentObjectUrl = null;
 let currentLoadToken = 0;
 let currentLang = 'en';
+let selectedEdgeMode = 'straight';
 
 const PAD = 32;           // 画像まわりの余白(px)
 let imgOX = 0, imgOY = 0; // 画像の描画オフセット
+const EDGE_MODE_KEYS = {
+  straight: { name: 'edgeStraight', desc: 'edgeStraightDesc' },
+  torn: { name: 'edgeTorn', desc: 'edgeTornDesc' },
+  deckle: { name: 'edgeDeckle', desc: 'edgeDeckleDesc' },
+  wavy: { name: 'edgeWavy', desc: 'edgeWavyDesc' },
+  stamp: { name: 'edgeStamp', desc: 'edgeStampDesc' }
+};
 const I18N = {
   ja: {
     mainDesc: '画像を四角形で切り抜くツール。上下左右のエッジ形状を個別に指定できる。',
@@ -60,11 +79,12 @@ const I18N = {
     edgeBottomLabel: '下エッジ',
     edgeLeftLabel: '左エッジ',
     edgeCenterLabel: 'エッジ形状',
+    edgeHelp: '見本を選んでから、上右下左のどこに適用するかを指定します。',
     roughnessLabel: 'エッジ強度',
     outlineLabel: '輪郭線',
     shadowLabel: 'ドロップシャドウ',
-    allStraightBtn: '全て直線',
-    allTornBtn: '全て破れ',
+    applyAllEdgesBtn: '全辺に適用',
+    selectedEdgeTitle: '選択中',
     sourceDesc: '画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。',
     newUploadBtn: '新規アップロード',
     pasteUploadBtn: 'クリップボードから貼り付け',
@@ -74,10 +94,15 @@ const I18N = {
     downloadBtn: 'PNGをダウンロード',
     copyBtn: 'クリップボードにコピー',
     edgeStraight: '直線',
+    edgeStraightDesc: 'まっすぐ切ったような整った縁。',
     edgeTorn: '紙を破った風',
+    edgeTornDesc: '大きく荒い破れ跡が残るラフな縁。',
     edgeDeckle: '手漉き紙風',
+    edgeDeckleDesc: '細かく柔らかな紙耳が続く上品な縁。',
     edgeWavy: 'たわみ紙風',
+    edgeWavyDesc: '湿りで少したわんだようなゆるいうねり。',
     edgeStamp: '半券ミシン目風',
+    edgeStampDesc: '半券を切り離した後のような反復ノッチ。',
     alertLoadFail: '画像の読み込みに失敗しました',
     alertClipboardUnsupported: 'このブラウザではクリップボード読み取りに対応していません',
     alertClipboardNoImage: 'クリップボードに画像がありません',
@@ -98,11 +123,12 @@ const I18N = {
     edgeBottomLabel: 'Bottom Edge',
     edgeLeftLabel: 'Left Edge',
     edgeCenterLabel: 'Edge Shape',
+    edgeHelp: 'Choose a sample, then apply it to the top, right, bottom, or left edge.',
     roughnessLabel: 'Edge Intensity',
     outlineLabel: 'Outline',
     shadowLabel: 'Drop Shadow',
-    allStraightBtn: 'All Straight',
-    allTornBtn: 'All Torn',
+    applyAllEdgesBtn: 'Apply to All Edges',
+    selectedEdgeTitle: 'Selected',
     sourceDesc: 'Drag on the image to select a crop region. Dragging over margin is clamped to image bounds.',
     newUploadBtn: 'Upload New Image',
     pasteUploadBtn: 'Paste from Clipboard',
@@ -112,10 +138,15 @@ const I18N = {
     downloadBtn: 'Download PNG',
     copyBtn: 'Copy to Clipboard',
     edgeStraight: 'Straight',
+    edgeStraightDesc: 'A clean edge as if cut with a straight blade.',
     edgeTorn: 'Torn Paper',
+    edgeTornDesc: 'A rough edge with larger, more obvious tear marks.',
     edgeDeckle: 'Deckle Edge',
+    edgeDeckleDesc: 'A soft handmade-paper edge with fine paper fibers.',
     edgeWavy: 'Wavy Paper',
+    edgeWavyDesc: 'A gentle waviness like paper that has slightly warped.',
     edgeStamp: 'Ticket Stub',
+    edgeStampDesc: 'A repeated notch pattern like a torn ticket stub.',
     alertLoadFail: 'Failed to load image',
     alertClipboardUnsupported: 'Clipboard read is not supported in this browser',
     alertClipboardNoImage: 'No image found in clipboard',
@@ -136,6 +167,16 @@ function t(key){
   return pack[key] || key;
 }
 
+function getEdgeModeName(mode){
+  const keys = EDGE_MODE_KEYS[mode] || EDGE_MODE_KEYS.straight;
+  return t(keys.name);
+}
+
+function getEdgeModeDescription(mode){
+  const keys = EDGE_MODE_KEYS[mode] || EDGE_MODE_KEYS.straight;
+  return t(keys.desc);
+}
+
 function applyLanguage(lang){
   if (!I18N[lang]) lang = 'ja';
   currentLang = lang;
@@ -146,11 +187,12 @@ function applyLanguage(lang){
   edgeBottomLabel.textContent = t('edgeBottomLabel');
   edgeLeftLabel.textContent = t('edgeLeftLabel');
   edgeCenterLabel.textContent = t('edgeCenterLabel');
+  edgeHelp.textContent = t('edgeHelp');
   roughnessLabel.textContent = t('roughnessLabel');
   outlineLabel.textContent = t('outlineLabel');
   shadowLabel.textContent = t('shadowLabel');
-  allStraightBtn.textContent = t('allStraightBtn');
-  allTornBtn.textContent = t('allTornBtn');
+  applyAllEdgesBtn.textContent = t('applyAllEdgesBtn');
+  selectedEdgeTitle.textContent = t('selectedEdgeTitle');
   sourceDesc.textContent = t('sourceDesc');
   newUploadBtn.textContent = t('newUploadBtn');
   pasteUploadBtn.textContent = t('pasteUploadBtn');
@@ -161,19 +203,11 @@ function applyLanguage(lang){
   copyBtn.textContent = t('copyBtn');
   srcDropZone.setAttribute('aria-label', t('dropzoneAriaLabel'));
   updateSelectionUi();
-
-  const edgeOptionLabels = {
-    straight: 'edgeStraight',
-    torn: 'edgeTorn',
-    deckle: 'edgeDeckle',
-    wavy: 'edgeWavy',
-    stamp: 'edgeStamp'
-  };
-  for (const [value, key] of Object.entries(edgeOptionLabels)){
-    for (const option of document.querySelectorAll(`select option[value="${value}"]`)){
-      option.textContent = t(key);
-    }
+  for (const el of document.querySelectorAll('[data-i18n]')){
+    el.textContent = t(el.dataset.i18n);
   }
+  updateEdgeUi();
+  renderEdgeGalleryPreviews();
 }
 
 function getInitialLanguage(){
@@ -191,9 +225,89 @@ function setAllEdges(mode){
   edgeRight.value = mode;
   edgeBottom.value = mode;
   edgeLeft.value = mode;
+  updateEdgeUi();
+  renderOutputPreview();
 }
-allStraightBtn.addEventListener('click', () => setAllEdges('straight'));
-allTornBtn.addEventListener('click', () => setAllEdges('torn'));
+
+function getEdgeValues(){
+  return {
+    top: edgeTop.value,
+    right: edgeRight.value,
+    bottom: edgeBottom.value,
+    left: edgeLeft.value
+  };
+}
+
+function updateEdgeUi(){
+  for (const card of edgeCards){
+    const isSelected = card.dataset.mode === selectedEdgeMode;
+    card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+  }
+  for (const [edge, el] of Object.entries(edgeValueEls)){
+    if (el) el.textContent = getEdgeModeName(getEdgeValues()[edge]);
+  }
+  selectedEdgeName.textContent = getEdgeModeName(selectedEdgeMode);
+  selectedEdgeDesc.textContent = getEdgeModeDescription(selectedEdgeMode);
+}
+
+function selectEdgeMode(mode){
+  selectedEdgeMode = EDGE_MODE_KEYS[mode] ? mode : 'straight';
+  updateEdgeUi();
+}
+
+function applySelectedModeToEdge(edge){
+  const map = { top: edgeTop, right: edgeRight, bottom: edgeBottom, left: edgeLeft };
+  const input = map[edge];
+  if (!input) return;
+  input.value = selectedEdgeMode;
+  updateEdgeUi();
+  renderOutputPreview();
+}
+
+function renderEdgeCardPreview(card){
+  const canvas = card.querySelector('canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const mode = card.dataset.mode || 'straight';
+  const bounds = buildEdgeBounds(w - 28, h - 24, Number(roughnessInput.value), {
+    top: mode,
+    right: 'straight',
+    bottom: 'straight',
+    left: 'straight'
+  });
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#ebefe6';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#d5ddcf';
+  ctx.fillRect(0, h * 0.55, w, h * 0.45);
+
+  ctx.save();
+  ctx.translate(14, 12);
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.18)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 4;
+  ctx.fillStyle = '#f8f5ec';
+  drawEdgePath(ctx, bounds, w - 28, h - 24, 0, 0);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(14, 12);
+  ctx.strokeStyle = 'rgba(40, 40, 40, 0.35)';
+  ctx.lineWidth = 1.2;
+  drawEdgePath(ctx, bounds, w - 28, h - 24, 0, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function renderEdgeGalleryPreviews(){
+  for (const card of edgeCards){
+    renderEdgeCardPreview(card);
+  }
+}
 
 function revokeCurrentObjectUrl(){
   if (currentObjectUrl){
@@ -210,6 +324,65 @@ function clearOutput(){
   outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
   downloadBtn.disabled = true;
   copyBtn.disabled = true;
+}
+
+function renderOutputPreview(){
+  if (!img || !hasValidSelection(rect, 2)) {
+    clearOutput();
+    return;
+  }
+
+  const w = Math.round(rect.w);
+  const h = Math.round(rect.h);
+  const withShadow = shadowEnabled.checked;
+  const withOutline = outlineEnabled.checked;
+  const insets = computeOutputInsets(withShadow, withOutline);
+  const outW = w + insets.left + insets.right;
+  const outH = h + insets.top + insets.bottom;
+  outCanvas.width = outW;
+  outCanvas.height = outH;
+  outCtx.clearRect(0, 0, outW, outH);
+
+  const sx = rect.x - imgOX;
+  const sy = rect.y - imgOY;
+  const rough = Number(roughnessInput.value);
+  const bounds = buildEdgeBounds(w, h, rough, getEdgeValues());
+
+  const maskedCanvas = document.createElement('canvas');
+  maskedCanvas.width = w;
+  maskedCanvas.height = h;
+  const maskedCtx = maskedCanvas.getContext('2d');
+  maskedCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
+  const imageData = maskedCtx.getImageData(0, 0, w, h);
+  applyEdgeMask(imageData, bounds, w, h);
+  maskedCtx.putImageData(imageData, 0, 0);
+
+  if (withShadow){
+    outCtx.save();
+    outCtx.shadowColor = SHADOW_COLOR;
+    outCtx.shadowBlur = SHADOW_BLUR;
+    outCtx.shadowOffsetX = SHADOW_OFFSET_X;
+    outCtx.shadowOffsetY = SHADOW_OFFSET_Y;
+    outCtx.drawImage(maskedCanvas, insets.left, insets.top);
+    outCtx.restore();
+  }
+
+  outCtx.drawImage(maskedCanvas, insets.left, insets.top);
+
+  if (withOutline){
+    outCtx.save();
+    outCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    outCtx.lineWidth = 1.5;
+    outCtx.lineJoin = 'round';
+    outCtx.lineCap = 'round';
+    outCtx.miterLimit = 2;
+    drawEdgePath(outCtx, bounds, w, h, insets.left, insets.top);
+    outCtx.stroke();
+    outCtx.restore();
+  }
+
+  downloadBtn.disabled = false;
+  copyBtn.disabled = false;
 }
 
 function showStatus(key, type, autoHideMs){
@@ -241,6 +414,11 @@ function updateSelectionUi(){
   }
   selectionHint.textContent = text;
   cropBtn.disabled = !canCrop;
+  if (canCrop){
+    renderOutputPreview();
+  } else {
+    clearOutput();
+  }
 }
 
 function loadImageFromBlob(blob){
@@ -539,65 +717,7 @@ cropBtn.addEventListener('click', () => {
     window.alert(t('alertNeedSelection'));
     return;
   }
-
-  const w = Math.round(rect.w);
-  const h = Math.round(rect.h);
-  const withShadow = shadowEnabled.checked;
-  const withOutline = outlineEnabled.checked;
-  const insets = computeOutputInsets(withShadow, withOutline);
-  const outW = w + insets.left + insets.right;
-  const outH = h + insets.top + insets.bottom;
-  outCanvas.width = outW;
-  outCanvas.height = outH;
-  outCtx.clearRect(0, 0, outW, outH);
-
-  // 画像座標へ変換（余白オフセットを引く）
-  const sx = rect.x - imgOX;
-  const sy = rect.y - imgOY;
-
-  const rough = Number(roughnessInput.value);
-  const bounds = buildEdgeBounds(w, h, rough, {
-    top: edgeTop.value,
-    right: edgeRight.value,
-    bottom: edgeBottom.value,
-    left: edgeLeft.value
-  });
-
-  const maskedCanvas = document.createElement('canvas');
-  maskedCanvas.width = w;
-  maskedCanvas.height = h;
-  const maskedCtx = maskedCanvas.getContext('2d');
-  maskedCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
-  const imageData = maskedCtx.getImageData(0, 0, w, h);
-  applyEdgeMask(imageData, bounds, w, h);
-  maskedCtx.putImageData(imageData, 0, 0);
-
-  if (withShadow){
-    outCtx.save();
-    outCtx.shadowColor = SHADOW_COLOR;
-    outCtx.shadowBlur = SHADOW_BLUR;
-    outCtx.shadowOffsetX = SHADOW_OFFSET_X;
-    outCtx.shadowOffsetY = SHADOW_OFFSET_Y;
-    outCtx.drawImage(maskedCanvas, insets.left, insets.top);
-    outCtx.restore();
-  }
-
-  outCtx.drawImage(maskedCanvas, insets.left, insets.top);
-
-  if (withOutline){
-    outCtx.save();
-    outCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    outCtx.lineWidth = 1.5;
-    outCtx.lineJoin = 'round';
-    outCtx.lineCap = 'round';
-    outCtx.miterLimit = 2;
-    drawEdgePath(outCtx, bounds, w, h, insets.left, insets.top);
-    outCtx.stroke();
-    outCtx.restore();
-  }
-
-  downloadBtn.disabled = false;
-  copyBtn.disabled = false;
+  renderOutputPreview();
 });
 
 downloadBtn.addEventListener('click', () => {
@@ -629,10 +749,34 @@ resetBtn.addEventListener('click', () => {
   updateSelectionUi();
 });
 
+applyAllEdgesBtn.addEventListener('click', () => {
+  setAllEdges(selectedEdgeMode);
+});
+
+for (const card of edgeCards){
+  card.addEventListener('click', () => {
+    selectEdgeMode(card.dataset.mode || 'straight');
+  });
+}
+
+for (const button of edgeAssignButtons){
+  button.addEventListener('click', () => {
+    applySelectedModeToEdge(button.dataset.edge);
+  });
+}
+
+roughnessInput.addEventListener('input', () => {
+  renderEdgeGalleryPreviews();
+  renderOutputPreview();
+});
+outlineEnabled.addEventListener('change', renderOutputPreview);
+shadowEnabled.addEventListener('change', renderOutputPreview);
+
 srcCanvas.width = 960;
 srcCanvas.height = 420;
 updateSourceState();
 applyLanguage(getInitialLanguage());
+selectEdgeMode('straight');
 updateSelectionUi();
 
 if (typeof module !== 'undefined' && module.exports){

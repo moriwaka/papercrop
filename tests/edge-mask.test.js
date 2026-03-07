@@ -50,6 +50,20 @@ function findStampPeaks(values, threshold){
   return peaks;
 }
 
+function longestRunAtValue(values, target, epsilon, start = 0, end = values.length - 1){
+  let longest = 0;
+  let current = 0;
+  for (let i = start; i <= end; i++){
+    if (Math.abs(values[i] - target) <= epsilon){
+      current++;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+  return longest;
+}
+
 test('straight edges keep full alpha mask', () => {
   const w = 24;
   const h = 18;
@@ -87,6 +101,21 @@ test('all torn edges remove all four corner pixels', () => {
   assert.equal(alphaAt(imageData, w, w - 1, 0), 0);
   assert.equal(alphaAt(imageData, w, 0, h - 1), 0);
   assert.equal(alphaAt(imageData, w, w - 1, h - 1), 0);
+});
+
+test('strong torn edges stay irregular without long clipped straight sections', () => {
+  const bounds = buildEdgeBounds(160, 96, 20, {
+    top: 'torn',
+    right: 'straight',
+    bottom: 'straight',
+    left: 'straight'
+  });
+
+  const midStart = Math.floor(bounds.top.length * 0.1);
+  const midEnd = Math.ceil(bounds.top.length * 0.9);
+  const longestZeroRun = longestRunAtValue(bounds.top, 0, 1e-9, midStart, midEnd);
+
+  assert.ok(longestZeroRun <= 2, 'torn edge should not flatten into a long straight segment after offset normalization');
 });
 
 test('edge bounds are deterministic for same inputs', () => {

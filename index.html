@@ -28,44 +28,93 @@
 
   <div class="panel">
     <div class="controls-block">
-      <div class="edge-cross">
-        <label class="edge-top"><span id="edgeTopLabel">上エッジ</span>:
-          <select id="edgeTop">
-            <option value="straight">直線</option>
-            <option value="torn">紙を破った風</option>
-            <option value="deckle">手漉き紙風</option>
-            <option value="wavy">たわみ紙風</option>
-            <option value="stamp">半券ミシン目風</option>
-          </select>
-        </label>
-        <label class="edge-right"><span id="edgeRightLabel">右エッジ</span>:
-          <select id="edgeRight">
-            <option value="straight">直線</option>
-            <option value="torn">紙を破った風</option>
-            <option value="deckle">手漉き紙風</option>
-            <option value="wavy">たわみ紙風</option>
-            <option value="stamp">半券ミシン目風</option>
-          </select>
-        </label>
-        <label class="edge-bottom"><span id="edgeBottomLabel">下エッジ</span>:
-          <select id="edgeBottom">
-            <option value="straight">直線</option>
-            <option value="torn">紙を破った風</option>
-            <option value="deckle">手漉き紙風</option>
-            <option value="wavy">たわみ紙風</option>
-            <option value="stamp">半券ミシン目風</option>
-          </select>
-        </label>
-        <label class="edge-left"><span id="edgeLeftLabel">左エッジ</span>:
-          <select id="edgeLeft">
-            <option value="straight">直線</option>
-            <option value="torn">紙を破った風</option>
-            <option value="deckle">手漉き紙風</option>
-            <option value="wavy">たわみ紙風</option>
-            <option value="stamp">半券ミシン目風</option>
-          </select>
-        </label>
-        <div class="edge-center" id="edgeCenterLabel">エッジ形状</div>
+      <select id="edgeTop" class="visually-hidden">
+        <option value="straight">直線</option>
+        <option value="torn">紙を破った風</option>
+        <option value="deckle">手漉き紙風</option>
+        <option value="wavy">たわみ紙風</option>
+        <option value="stamp">半券ミシン目風</option>
+      </select>
+      <select id="edgeRight" class="visually-hidden">
+        <option value="straight">直線</option>
+        <option value="torn">紙を破った風</option>
+        <option value="deckle">手漉き紙風</option>
+        <option value="wavy">たわみ紙風</option>
+        <option value="stamp">半券ミシン目風</option>
+      </select>
+      <select id="edgeBottom" class="visually-hidden">
+        <option value="straight">直線</option>
+        <option value="torn">紙を破った風</option>
+        <option value="deckle">手漉き紙風</option>
+        <option value="wavy">たわみ紙風</option>
+        <option value="stamp">半券ミシン目風</option>
+      </select>
+      <select id="edgeLeft" class="visually-hidden">
+        <option value="straight">直線</option>
+        <option value="torn">紙を破った風</option>
+        <option value="deckle">手漉き紙風</option>
+        <option value="wavy">たわみ紙風</option>
+        <option value="stamp">半券ミシン目風</option>
+      </select>
+
+      <div class="edge-picker-header">
+        <div>
+          <div class="control-title" id="edgeCenterLabel">エッジ形状</div>
+          <p class="control-help" id="edgeHelp">見本を選んでから、上右下左のどこに適用するかを指定します。</p>
+        </div>
+      </div>
+
+      <div class="edge-gallery" id="edgeGallery" role="radiogroup" aria-label="エッジ形状一覧">
+        <button type="button" class="edge-card" data-mode="straight" role="radio" aria-checked="false">
+          <canvas class="edge-card-canvas" width="140" height="88" aria-hidden="true"></canvas>
+          <span class="edge-card-name" data-i18n="edgeStraight">直線</span>
+          <span class="edge-card-desc" data-i18n="edgeStraightDesc">まっすぐ切ったような整った縁。</span>
+        </button>
+        <button type="button" class="edge-card" data-mode="torn" role="radio" aria-checked="false">
+          <canvas class="edge-card-canvas" width="140" height="88" aria-hidden="true"></canvas>
+          <span class="edge-card-name" data-i18n="edgeTorn">紙を破った風</span>
+          <span class="edge-card-desc" data-i18n="edgeTornDesc">大きく荒い破れ跡が残るラフな縁。</span>
+        </button>
+        <button type="button" class="edge-card" data-mode="deckle" role="radio" aria-checked="false">
+          <canvas class="edge-card-canvas" width="140" height="88" aria-hidden="true"></canvas>
+          <span class="edge-card-name" data-i18n="edgeDeckle">手漉き紙風</span>
+          <span class="edge-card-desc" data-i18n="edgeDeckleDesc">細かく柔らかな紙耳が続く上品な縁。</span>
+        </button>
+        <button type="button" class="edge-card" data-mode="wavy" role="radio" aria-checked="false">
+          <canvas class="edge-card-canvas" width="140" height="88" aria-hidden="true"></canvas>
+          <span class="edge-card-name" data-i18n="edgeWavy">たわみ紙風</span>
+          <span class="edge-card-desc" data-i18n="edgeWavyDesc">湿りで少したわんだようなゆるいうねり。</span>
+        </button>
+        <button type="button" class="edge-card" data-mode="stamp" role="radio" aria-checked="false">
+          <canvas class="edge-card-canvas" width="140" height="88" aria-hidden="true"></canvas>
+          <span class="edge-card-name" data-i18n="edgeStamp">半券ミシン目風</span>
+          <span class="edge-card-desc" data-i18n="edgeStampDesc">半券を切り離した後のような反復ノッチ。</span>
+        </button>
+      </div>
+
+      <div class="edge-cross" id="edgeAssignment">
+        <button type="button" class="edge-assign edge-top" data-edge="top">
+          <span class="edge-assign-label" id="edgeTopLabel">上エッジ</span>
+          <span class="edge-assign-value" data-edge-value="top"></span>
+        </button>
+        <button type="button" id="applyAllEdgesBtn" class="secondary edge-apply-all">全辺に適用</button>
+        <button type="button" class="edge-assign edge-right" data-edge="right">
+          <span class="edge-assign-label" id="edgeRightLabel">右エッジ</span>
+          <span class="edge-assign-value" data-edge-value="right"></span>
+        </button>
+        <button type="button" class="edge-assign edge-bottom" data-edge="bottom">
+          <span class="edge-assign-label" id="edgeBottomLabel">下エッジ</span>
+          <span class="edge-assign-value" data-edge-value="bottom"></span>
+        </button>
+        <button type="button" class="edge-assign edge-left" data-edge="left">
+          <span class="edge-assign-label" id="edgeLeftLabel">左エッジ</span>
+          <span class="edge-assign-value" data-edge-value="left"></span>
+        </button>
+        <div class="edge-center edge-selection-summary" id="selectedEdgeCard">
+          <span class="edge-center-title" id="selectedEdgeTitle">選択中</span>
+          <span class="edge-center-name" id="selectedEdgeName">直線</span>
+          <span class="edge-center-desc" id="selectedEdgeDesc">まっすぐ切ったような整った縁。</span>
+        </div>
       </div>
 
       <div class="roughness-row">
@@ -75,11 +124,6 @@
       <div class="row effect-options">
         <label><input type="checkbox" id="outlineEnabled" checked> <span id="outlineLabel">輪郭線</span></label>
         <label><input type="checkbox" id="shadowEnabled" checked> <span id="shadowLabel">ドロップシャドウ</span></label>
-      </div>
-
-      <div class="row edge-buttons">
-        <button id="allStraightBtn" class="secondary">全て直線</button>
-        <button id="allTornBtn" class="secondary">全て破れ</button>
       </div>
     </div>
   </div>
