@@ -63,6 +63,7 @@ let currentLoadToken = 0;
 let currentLang = 'en';
 let selectedEdgeMode = 'straight';
 let canPersistEdgeSettings = false;
+let currentSourceFilename = null;
 
 const PAD = 32;           // 画像まわりの余白(px)
 let imgOX = 0, imgOY = 0; // 画像の描画オフセット
@@ -247,6 +248,21 @@ function restoreEdgeSettings(){
   if (typeof stored.shadowEnabled === 'boolean'){
     shadowEnabled.checked = stored.shadowEnabled;
   }
+}
+
+function buildDownloadFilename(){
+  if (!currentSourceFilename){
+    return 'paper-crop.png';
+  }
+
+  const lastDot = currentSourceFilename.lastIndexOf('.');
+  if (lastDot <= 0 || lastDot === currentSourceFilename.length - 1){
+    return `${currentSourceFilename}-papercrop.png`;
+  }
+
+  const basename = currentSourceFilename.slice(0, lastDot);
+  const ext = currentSourceFilename.slice(lastDot + 1);
+  return `${basename}-papercrop.${ext}`;
 }
 
 function applyLanguage(lang){
@@ -498,7 +514,8 @@ function updateSelectionUi(){
   }
 }
 
-function loadImageFromBlob(blob){
+function loadImageFromBlob(blob, sourceFilename){
+  currentSourceFilename = sourceFilename || null;
   revokeCurrentObjectUrl();
   const url = URL.createObjectURL(blob);
   const loadToken = ++currentLoadToken;
@@ -546,7 +563,7 @@ function loadImageFromBlob(blob){
 
 function loadImageFromFile(file){
   if (!file || !file.type.startsWith('image/')) return;
-  loadImageFromBlob(file);
+  loadImageFromBlob(file, file.name || null);
 }
 
 fileInput.addEventListener('change', () => {
@@ -856,7 +873,7 @@ cropBtn.addEventListener('click', () => {
 downloadBtn.addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = outCanvas.toDataURL('image/png');
-  a.download = 'paper-crop.png';
+  a.download = buildDownloadFilename();
   a.click();
 });
 
