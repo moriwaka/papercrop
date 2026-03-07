@@ -51,6 +51,7 @@ const SHADOW_COLOR = 'rgba(0, 0, 0, 0.45)';
 const SHADOW_BLUR = 14;
 const SHADOW_OFFSET_X = 0;
 const SHADOW_OFFSET_Y = 6;
+const EDGE_SETTINGS_STORAGE_KEY = 'papercrop.edgeSettings.v1';
 
 let img = null;
 let dragging = false;
@@ -177,6 +178,66 @@ function getEdgeModeDescription(mode){
   return t(keys.desc);
 }
 
+function isValidEdgeMode(mode){
+  return Object.hasOwn(EDGE_MODE_KEYS, mode);
+}
+
+function loadStoredEdgeSettings(){
+  try{
+    const raw = window.localStorage.getItem(EDGE_SETTINGS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch (e){
+    return null;
+  }
+}
+
+function saveEdgeSettings(){
+  try{
+    window.localStorage.setItem(EDGE_SETTINGS_STORAGE_KEY, JSON.stringify({
+      selectedEdgeMode,
+      roughness: Number(roughnessInput.value),
+      edges: getEdgeValues()
+    }));
+  } catch (e){
+    // Ignore storage failures such as private browsing restrictions.
+  }
+}
+
+function restoreEdgeSettings(){
+  const stored = loadStoredEdgeSettings();
+  if (!stored) return;
+
+  const nextEdges = stored.edges && typeof stored.edges === 'object' ? stored.edges : {};
+  const edgeMap = {
+    top: edgeTop,
+    right: edgeRight,
+    bottom: edgeBottom,
+    left: edgeLeft
+  };
+
+  for (const [edge, input] of Object.entries(edgeMap)){
+    const mode = nextEdges[edge];
+    if (isValidEdgeMode(mode)){
+      input.value = mode;
+    }
+  }
+
+  const nextSelectedMode = stored.selectedEdgeMode;
+  if (isValidEdgeMode(nextSelectedMode)){
+    selectedEdgeMode = nextSelectedMode;
+  }
+
+  const roughness = Number(stored.roughness);
+  const min = Number(roughnessInput.min);
+  const max = Number(roughnessInput.max);
+  if (Number.isFinite(roughness)){
+    roughnessInput.value = String(Math.min(Math.max(roughness, min), max));
+  }
+}
+
 function applyLanguage(lang){
   if (!I18N[lang]) lang = 'ja';
   currentLang = lang;
@@ -226,6 +287,7 @@ function setAllEdges(mode){
   edgeBottom.value = mode;
   edgeLeft.value = mode;
   updateEdgeUi();
+  saveEdgeSettings();
   renderOutputPreview();
 }
 
@@ -253,6 +315,7 @@ function updateEdgeUi(){
 function selectEdgeMode(mode){
   selectedEdgeMode = EDGE_MODE_KEYS[mode] ? mode : 'straight';
   updateEdgeUi();
+  saveEdgeSettings();
 }
 
 function applySelectedModeToEdge(edge){
@@ -261,6 +324,7 @@ function applySelectedModeToEdge(edge){
   if (!input) return;
   input.value = selectedEdgeMode;
   updateEdgeUi();
+  saveEdgeSettings();
   renderOutputPreview();
 }
 
@@ -766,6 +830,7 @@ for (const button of edgeAssignButtons){
 }
 
 roughnessInput.addEventListener('input', () => {
+  saveEdgeSettings();
   renderEdgeGalleryPreviews();
   renderOutputPreview();
 });
@@ -774,9 +839,10 @@ shadowEnabled.addEventListener('change', renderOutputPreview);
 
 srcCanvas.width = 960;
 srcCanvas.height = 420;
+restoreEdgeSettings();
 updateSourceState();
 applyLanguage(getInitialLanguage());
-selectEdgeMode('straight');
+selectEdgeMode(selectedEdgeMode);
 updateSelectionUi();
 
 if (typeof module !== 'undefined' && module.exports){
