@@ -13,6 +13,20 @@
   <input type="file" id="fileInput" accept="image/*" hidden>
 
   <div class="panel">
+    <p class="desc" id="sourceDesc">画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。</p>
+    <div class="row upload-actions">
+      <button id="newUploadBtn" class="secondary">新規アップロード</button>
+      <button id="pasteUploadBtn" class="secondary">クリップボードから貼り付け</button>
+      <button id="resetBtn" class="secondary">リセット</button>
+    </div>
+    <div class="canvas-wrap source-dropzone" id="srcDropZone" tabindex="0" role="button" aria-label="画像をアップロード">
+      <canvas id="srcCanvas"></canvas>
+      <div id="srcHint" class="src-hint">ここをクリック / ドロップで画像をアップロード</div>
+    </div>
+    <p class="desc selection-hint" id="selectionHint">画像をアップロードして開始してください。</p>
+  </div>
+
+  <div class="panel">
     <div class="controls-block">
       <div class="edge-cross">
         <label class="edge-top"><span id="edgeTopLabel">上エッジ</span>:
@@ -56,20 +70,6 @@
         <button id="allTornBtn" class="secondary">全て破れ</button>
       </div>
     </div>
-  </div>
-
-  <div class="panel">
-    <p class="desc" id="sourceDesc">画像上でドラッグして切り抜き範囲を指定する。余白上でドラッグしても、選択領域は画像を越えない。</p>
-    <div class="row upload-actions">
-      <button id="newUploadBtn" class="secondary">新規アップロード</button>
-      <button id="pasteUploadBtn" class="secondary">クリップボードから貼り付け</button>
-      <button id="resetBtn" class="secondary">リセット</button>
-    </div>
-    <div class="canvas-wrap source-dropzone" id="srcDropZone" tabindex="0" role="button" aria-label="画像をアップロード">
-      <canvas id="srcCanvas"></canvas>
-      <div id="srcHint" class="src-hint">ここをクリック / ドロップで画像をアップロード</div>
-    </div>
-    <p class="desc selection-hint" id="selectionHint">画像をアップロードして開始してください。</p>
   </div>
 
   <div class="panel">
