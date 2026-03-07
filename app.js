@@ -62,6 +62,7 @@ let currentObjectUrl = null;
 let currentLoadToken = 0;
 let currentLang = 'en';
 let selectedEdgeMode = 'straight';
+let canPersistEdgeSettings = false;
 
 const PAD = 32;           // 画像まわりの余白(px)
 let imgOX = 0, imgOY = 0; // 画像の描画オフセット
@@ -195,6 +196,7 @@ function loadStoredEdgeSettings(){
 }
 
 function saveEdgeSettings(){
+  if (!canPersistEdgeSettings) return;
   try{
     window.localStorage.setItem(EDGE_SETTINGS_STORAGE_KEY, JSON.stringify({
       selectedEdgeMode,
@@ -855,6 +857,8 @@ updateSourceState();
 applyLanguage(getInitialLanguage());
 selectEdgeMode(selectedEdgeMode);
 updateSelectionUi();
+canPersistEdgeSettings = true;
+saveEdgeSettings();
 
 if (typeof module !== 'undefined' && module.exports){
   module.exports = {
