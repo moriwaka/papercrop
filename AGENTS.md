@@ -6,8 +6,12 @@ This repository is a lightweight, single-page web tool.
 - `index.html`: HTML structure and UI markup.
 - `styles.css`: Application styling and responsive layout rules.
 - `app.js`: UI events, upload flows, canvas interactions, and rendering pipeline.
+- `ui-state.js`: Selection-state helpers shared across app logic and tests.
 - `edge-mask.js`: Edge-bound generation and pixel mask logic (shared/testable module).
 - `tests/edge-mask.test.js`: Node-based regression tests for mask behavior.
+- `tests/ui-state.test.js`: Node-based tests for selection-state text and thresholds.
+- `tests/app.test.js`: Node-based harness tests for UI wiring and app behaviors.
+- `tests/e2e/app.spec.js`: Playwright smoke coverage for the browser flow.
 - `LICENSE`: MIT license.
 
 When adding features, keep the app runnable without a build step.
@@ -20,7 +24,7 @@ No package manager or build pipeline is required.
 - `git status`: Check local changes before committing.
 - `node --check app.js`: Syntax check for app logic.
 - `node --check edge-mask.js`: Syntax check for mask module.
-- `node --test tests/edge-mask.test.js`: Run regression tests for edge-mask behavior.
+- `node --test tests/edge-mask.test.js tests/ui-state.test.js tests/app.test.js`: Run the Node regression suite.
 
 You can open `index.html` directly, but a local server is preferred for consistent behavior.
 
@@ -36,9 +40,9 @@ Before submitting, avoid unused variables or dead UI controls.
 ## Testing Guidelines
 Use both automated and manual verification.
 
-- Run `node --test tests/edge-mask.test.js` before commit.
+- Run `node --test tests/edge-mask.test.js tests/ui-state.test.js tests/app.test.js` before commit.
 - Load an image, drag-select a region, and run `Crop`.
-- Verify each edge mode (`straight`/`torn`) on all four sides.
+- Verify each edge mode (`straight`, `torn`, `deckle`, `wavy`, `stamp`) on all four sides.
 - Verify upload flows: click-to-upload, drag-and-drop, and clipboard paste.
 - Validate `Download PNG` and clipboard copy behavior.
 - Confirm outline/shadow toggles and checkerboard preview behavior.
@@ -62,6 +66,9 @@ Keep conventions simple and consistent.
 - Keep commits focused on one change.
 - PRs should include: purpose, summary of behavior changes, manual test steps, and screenshots/GIFs for UI updates.
 - Link related issues when available.
+
+## Documentation Maintenance
+- Keep implementation, `README.md`, and `README.ja.md` aligned when updating user-facing features, setup steps, supported edge modes, output behavior, or test instructions.
 
 ## Security & Configuration Tips
 - Do not commit secrets, tokens, or local config files.

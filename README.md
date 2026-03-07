@@ -20,6 +20,8 @@ A lightweight browser tool for cropping images with per-edge shape control. Each
   - Copy image to clipboard
 - UI localization: English / Japanese
 
+Clipboard read/write depends on browser support and usually requires a secure context (`https://` or `http://localhost`).
+
 ## Usage
 
 1. Upload an image (click, drop, or paste).
