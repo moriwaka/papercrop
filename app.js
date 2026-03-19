@@ -572,8 +572,17 @@ function loadImageFromBlob(blob, sourceFilename){
   nextImg.src = url;
 }
 
+function isSupportedImageFile(file){
+  if (!file) return false;
+  if (typeof file.type === 'string' && file.type.startsWith('image/')){
+    return true;
+  }
+  if (typeof file.name !== 'string') return false;
+  return /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(file.name);
+}
+
 function loadImageFromFile(file){
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!isSupportedImageFile(file)) return;
   loadImageFromBlob(file, file.name || null);
 }
 

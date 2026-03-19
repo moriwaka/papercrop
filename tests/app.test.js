@@ -525,6 +525,19 @@ test('reset clears an existing status message', () => {
   }
 });
 
+test('file input accepts image filenames even when mime type is empty', () => {
+  const harness = createHarness();
+  try{
+    harness.elements.fileInput.files = [{ name: 'scan.png', type: '' }];
+    harness.elements.fileInput.dispatch('change');
+
+    assert.equal(harness.pendingImages.length, 1);
+    assert.equal(harness.createdUrls[0].blob.name, 'scan.png');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('uploadFromClipboard shows an error when clipboard images are unavailable', async () => {
   const harness = createHarness({
     clipboard: {
