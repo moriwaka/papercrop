@@ -538,6 +538,41 @@ test('file input accepts image filenames even when mime type is empty', () => {
   }
 });
 
+test('new upload clears an in-progress drag so selection can restart', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'first' }, 'first.png');
+    const firstImage = harness.pendingImages[0];
+    firstImage.width = 120;
+    firstImage.height = 80;
+    firstImage.onload();
+
+    harness.elements.srcCanvas.dispatch('pointerdown', {
+      pointerId: 1,
+      clientX: 40,
+      clientY: 45
+    });
+
+    harness.app.loadImageFromBlob({ name: 'second' }, 'second.png');
+    const secondImage = harness.pendingImages[1];
+    secondImage.width = 100;
+    secondImage.height = 70;
+    secondImage.onload();
+
+    assert.equal(harness.app._getState().rect, null);
+
+    harness.elements.srcCanvas.dispatch('pointerdown', {
+      pointerId: 2,
+      clientX: 50,
+      clientY: 55
+    });
+
+    assert.deepEqual(harness.app._getState().rect, { x: 50, y: 55, w: 0, h: 0 });
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('uploadFromClipboard shows an error when clipboard images are unavailable', async () => {
   const harness = createHarness({
     clipboard: {

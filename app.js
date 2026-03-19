@@ -506,6 +506,11 @@ function clearStatus(){
   statusMessage.className = 'status-message';
 }
 
+function clearDragState(){
+  dragging = false;
+  activePointerId = null;
+}
+
 function updateSelectionUi(){
   const canCrop = hasValidSelection(rect, 2);
   const key = getSelectionHintKey(Boolean(img), rect, 2);
@@ -536,6 +541,7 @@ function loadImageFromBlob(blob, sourceFilename){
       URL.revokeObjectURL(url);
       return;
     }
+    clearDragState();
     img = nextImg;
     currentSourceFilename = nextSourceFilename;
     imgOX = PAD;
@@ -562,6 +568,7 @@ function loadImageFromBlob(blob, sourceFilename){
       URL.revokeObjectURL(url);
       return;
     }
+    clearDragState();
     showStatus('alertLoadFail', 'error');
     updateSourceState();
     if (currentObjectUrl === url){
@@ -913,6 +920,7 @@ copyBtn.addEventListener('click', async () => {
 });
 
 resetBtn.addEventListener('click', () => {
+  clearDragState();
   rect = null;
   if (img) redrawSource();
   clearStatus();
