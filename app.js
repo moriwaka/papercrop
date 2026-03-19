@@ -514,10 +514,10 @@ function updateSelectionUi(){
 }
 
 function loadImageFromBlob(blob, sourceFilename){
-  currentSourceFilename = sourceFilename || null;
   revokeCurrentObjectUrl();
   const url = URL.createObjectURL(blob);
   const loadToken = ++currentLoadToken;
+  const nextSourceFilename = sourceFilename || null;
   currentObjectUrl = url;
 
   const nextImg = new Image();
@@ -527,6 +527,7 @@ function loadImageFromBlob(blob, sourceFilename){
       return;
     }
     img = nextImg;
+    currentSourceFilename = nextSourceFilename;
     imgOX = PAD;
     imgOY = PAD;
 
