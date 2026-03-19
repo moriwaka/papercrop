@@ -569,6 +569,7 @@ function loadImageFromBlob(blob, sourceFilename){
       return;
     }
     clearDragState();
+    clearOutput();
     showStatus('alertLoadFail', 'error');
     updateSourceState();
     if (currentObjectUrl === url){

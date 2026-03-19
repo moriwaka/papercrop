@@ -481,6 +481,32 @@ test('failed replacement upload preserves the previous download filename', () =>
   }
 });
 
+test('failed replacement upload clears stale export actions', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'first' }, 'photo.jpg');
+    const firstImage = harness.pendingImages[0];
+    firstImage.width = 120;
+    firstImage.height = 80;
+    firstImage.onload();
+
+    harness.app._setRect({ x: 32, y: 32, w: 20, h: 18 });
+    harness.app.updateSelectionUi();
+    assert.equal(harness.elements.downloadBtn.disabled, false);
+    assert.equal(harness.elements.copyBtn.disabled, false);
+
+    harness.app.loadImageFromBlob({ name: 'broken' }, 'broken.webp');
+    const failedImage = harness.pendingImages[1];
+    failedImage.onerror();
+
+    assert.equal(harness.elements.downloadBtn.disabled, true);
+    assert.equal(harness.elements.copyBtn.disabled, true);
+    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('successful upload clears a previous load error status', () => {
   const harness = createHarness();
   try{
