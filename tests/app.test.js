@@ -505,6 +505,26 @@ test('successful upload clears a previous load error status', () => {
   }
 });
 
+test('reset clears an existing status message', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'broken' }, 'broken.webp');
+    const failedImage = harness.pendingImages[0];
+    failedImage.onerror();
+
+    assert.equal(harness.elements.statusMessage.hidden, false);
+    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+
+    harness.elements.resetBtn.dispatch('click');
+
+    assert.equal(harness.elements.statusMessage.hidden, true);
+    assert.equal(harness.elements.statusMessage.textContent, '');
+    assert.equal(harness.elements.statusMessage.className, 'status-message');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('uploadFromClipboard shows an error when clipboard images are unavailable', async () => {
   const harness = createHarness({
     clipboard: {

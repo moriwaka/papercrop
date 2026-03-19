@@ -906,6 +906,7 @@ copyBtn.addEventListener('click', async () => {
 resetBtn.addEventListener('click', () => {
   rect = null;
   if (img) redrawSource();
+  clearStatus();
   clearOutput();
   updateSelectionUi();
 });
