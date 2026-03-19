@@ -585,7 +585,7 @@ function isSupportedImageFile(file){
     return true;
   }
   if (typeof file.name !== 'string') return false;
-  return /\.(png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(file.name);
+  return /\.(png|jpe?g|jfif|gif|webp|bmp|svg|avif)$/i.test(file.name);
 }
 
 function loadImageFromFile(file){

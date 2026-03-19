@@ -538,6 +538,19 @@ test('file input accepts image filenames even when mime type is empty', () => {
   }
 });
 
+test('file input accepts jfif filenames when mime type is empty', () => {
+  const harness = createHarness();
+  try{
+    harness.elements.fileInput.files = [{ name: 'scan.jfif', type: '' }];
+    harness.elements.fileInput.dispatch('change');
+
+    assert.equal(harness.pendingImages.length, 1);
+    assert.equal(harness.createdUrls[0].blob.name, 'scan.jfif');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('new upload clears an in-progress drag so selection can restart', () => {
   const harness = createHarness();
   try{
