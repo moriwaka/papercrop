@@ -24,7 +24,8 @@ const roughnessLabel = document.getElementById('roughnessLabel');
 const outlineLabel = document.getElementById('outlineLabel');
 const shadowLabel = document.getElementById('shadowLabel');
 const selectionHint = document.getElementById('selectionHint');
-const statusMessage = document.getElementById('statusMessage');
+const sourceStatusMessage = document.getElementById('sourceStatusMessage');
+const outputStatusMessage = document.getElementById('outputStatusMessage');
 const applyAllEdgesBtn = document.getElementById('applyAllEdgesBtn');
 const selectedEdgeTitle = document.getElementById('selectedEdgeTitle');
 const selectedEdgeName = document.getElementById('selectedEdgeName');
@@ -52,6 +53,10 @@ const SHADOW_BLUR = 14;
 const SHADOW_OFFSET_X = 0;
 const SHADOW_OFFSET_Y = 6;
 const EDGE_SETTINGS_STORAGE_KEY = 'papercrop.edgeSettings.v1';
+const STATUS_AREAS = {
+  source: sourceStatusMessage,
+  output: outputStatusMessage
+};
 
 let img = null;
 let dragging = false;
@@ -477,33 +482,46 @@ function renderOutputPreview(){
   copyBtn.disabled = false;
 }
 
-function showStatus(key, type, autoHideMs){
+function showStatus(area, key, type, autoHideMs){
+  const statusEl = STATUS_AREAS[area];
+  if (!statusEl) return;
   const text = t(key);
-  statusMessage.hidden = false;
-  statusMessage.textContent = text;
-  statusMessage.className = `status-message ${type || 'info'}`;
-  if (showStatus._timer){
-    clearTimeout(showStatus._timer);
-    showStatus._timer = null;
+  statusEl.hidden = false;
+  statusEl.textContent = text;
+  statusEl.className = `status-message ${type || 'info'}`;
+  if (!showStatus._timers){
+    showStatus._timers = {};
+  }
+  if (showStatus._timers[area]){
+    clearTimeout(showStatus._timers[area]);
+    showStatus._timers[area] = null;
   }
   if (autoHideMs){
-    showStatus._timer = setTimeout(() => {
-      statusMessage.hidden = true;
-      statusMessage.textContent = '';
-      statusMessage.className = 'status-message';
-      showStatus._timer = null;
+    showStatus._timers[area] = setTimeout(() => {
+      statusEl.hidden = true;
+      statusEl.textContent = '';
+      statusEl.className = 'status-message';
+      showStatus._timers[area] = null;
     }, autoHideMs);
   }
 }
 
-function clearStatus(){
-  if (showStatus._timer){
-    clearTimeout(showStatus._timer);
-    showStatus._timer = null;
+function clearStatus(area){
+  if (area){
+    const statusEl = STATUS_AREAS[area];
+    if (!statusEl) return;
+    if (showStatus._timers?.[area]){
+      clearTimeout(showStatus._timers[area]);
+      showStatus._timers[area] = null;
+    }
+    statusEl.hidden = true;
+    statusEl.textContent = '';
+    statusEl.className = 'status-message';
+    return;
   }
-  statusMessage.hidden = true;
-  statusMessage.textContent = '';
-  statusMessage.className = 'status-message';
+  for (const key of Object.keys(STATUS_AREAS)){
+    clearStatus(key);
+  }
 }
 
 function clearDragState(){
@@ -570,7 +588,7 @@ function loadImageFromBlob(blob, sourceFilename){
     }
     clearDragState();
     clearOutput();
-    showStatus('alertLoadFail', 'error');
+    showStatus('source', 'alertLoadFail', 'error');
     updateSourceState();
     if (currentObjectUrl === url){
       URL.revokeObjectURL(url);
@@ -644,7 +662,7 @@ srcDropZone.addEventListener('drop', (e) => {
 
 async function uploadFromClipboard(){
   if (!navigator.clipboard || !navigator.clipboard.read){
-    showStatus('alertClipboardUnsupported', 'error');
+    showStatus('source', 'alertClipboardUnsupported', 'error');
     return;
   }
   try{
@@ -657,9 +675,9 @@ async function uploadFromClipboard(){
         return;
       }
     }
-    showStatus('alertClipboardNoImage', 'error');
+    showStatus('source', 'alertClipboardNoImage', 'error');
   } catch (e){
-    showStatus('alertClipboardReadFail', 'error');
+    showStatus('source', 'alertClipboardReadFail', 'error');
   }
 }
 
@@ -892,9 +910,10 @@ function computeOutputInsets(withShadow, withOutline){
 
 cropBtn.addEventListener('click', () => {
   if (!hasValidSelection(rect, 2)) {
-    window.alert(t('alertNeedSelection'));
+    showStatus('output', 'alertNeedSelection', 'error');
     return;
   }
+  clearStatus('output');
   renderOutputPreview();
 });
 
@@ -909,13 +928,13 @@ copyBtn.addEventListener('click', async () => {
   outCanvas.toBlob(async (blob) => {
     try{
       if (!blob){
-        showStatus('alertClipboardCopyFail', 'error');
+        showStatus('output', 'alertClipboardCopyFail', 'error');
         return;
       }
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showStatus('statusCopySuccess', 'success', 3000);
+      showStatus('output', 'statusCopySuccess', 'success', 3000);
     } catch (e){
-      showStatus('alertClipboardCopyFail', 'error');
+      showStatus('output', 'alertClipboardCopyFail', 'error');
     }
   });
 });

@@ -126,7 +126,7 @@ function createHarness(options = {}){
     'edgeTopLabel', 'edgeRightLabel', 'edgeBottomLabel', 'edgeLeftLabel',
     'edgeCenterLabel', 'edgeHelp', 'applyAllEdgesBtn', 'selectedEdgeTitle',
     'selectedEdgeName', 'selectedEdgeDesc', 'roughnessLabel', 'outlineLabel',
-    'shadowLabel', 'selectionHint', 'statusMessage', 'edgeTop', 'edgeRight',
+    'shadowLabel', 'selectionHint', 'sourceStatusMessage', 'outputStatusMessage', 'edgeTop', 'edgeRight',
     'edgeBottom', 'edgeLeft'
   ];
   const elements = Object.fromEntries(elementIds.map((id) => [id, createElement(id)]));
@@ -475,7 +475,7 @@ test('failed replacement upload preserves the previous download filename', () =>
 
     assert.equal(harness.createdAnchors.length, 1);
     assert.equal(harness.createdAnchors[0].download, 'photo-papercrop.png');
-    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'Failed to load image');
   } finally {
     harness.cleanup();
   }
@@ -501,7 +501,7 @@ test('failed replacement upload clears stale export actions', () => {
 
     assert.equal(harness.elements.downloadBtn.disabled, true);
     assert.equal(harness.elements.copyBtn.disabled, true);
-    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'Failed to load image');
   } finally {
     harness.cleanup();
   }
@@ -514,8 +514,8 @@ test('successful upload clears a previous load error status', () => {
     const failedImage = harness.pendingImages[0];
     failedImage.onerror();
 
-    assert.equal(harness.elements.statusMessage.hidden, false);
-    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+    assert.equal(harness.elements.sourceStatusMessage.hidden, false);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'Failed to load image');
 
     harness.app.loadImageFromBlob({ name: 'valid' }, 'photo.jpg');
     const nextImage = harness.pendingImages[1];
@@ -523,9 +523,9 @@ test('successful upload clears a previous load error status', () => {
     nextImage.height = 80;
     nextImage.onload();
 
-    assert.equal(harness.elements.statusMessage.hidden, true);
-    assert.equal(harness.elements.statusMessage.textContent, '');
-    assert.equal(harness.elements.statusMessage.className, 'status-message');
+    assert.equal(harness.elements.sourceStatusMessage.hidden, true);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, '');
+    assert.equal(harness.elements.sourceStatusMessage.className, 'status-message');
   } finally {
     harness.cleanup();
   }
@@ -538,14 +538,14 @@ test('reset clears an existing status message', () => {
     const failedImage = harness.pendingImages[0];
     failedImage.onerror();
 
-    assert.equal(harness.elements.statusMessage.hidden, false);
-    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+    assert.equal(harness.elements.sourceStatusMessage.hidden, false);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'Failed to load image');
 
     harness.elements.resetBtn.dispatch('click');
 
-    assert.equal(harness.elements.statusMessage.hidden, true);
-    assert.equal(harness.elements.statusMessage.textContent, '');
-    assert.equal(harness.elements.statusMessage.className, 'status-message');
+    assert.equal(harness.elements.sourceStatusMessage.hidden, true);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, '');
+    assert.equal(harness.elements.sourceStatusMessage.className, 'status-message');
   } finally {
     harness.cleanup();
   }
@@ -626,9 +626,21 @@ test('uploadFromClipboard shows an error when clipboard images are unavailable',
 
   try{
     await harness.app.uploadFromClipboard();
-    assert.equal(harness.elements.statusMessage.hidden, false);
-    assert.equal(harness.elements.statusMessage.textContent, 'No image found in clipboard');
-    assert.equal(harness.elements.statusMessage.className, 'status-message error');
+    assert.equal(harness.elements.sourceStatusMessage.hidden, false);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'No image found in clipboard');
+    assert.equal(harness.elements.sourceStatusMessage.className, 'status-message error');
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('crop without selection shows an output-area error instead of alert', () => {
+  const harness = createHarness();
+  try{
+    harness.elements.cropBtn.dispatch('click');
+    assert.equal(harness.window.alertCalls.length, 0);
+    assert.equal(harness.elements.outputStatusMessage.hidden, false);
+    assert.equal(harness.elements.outputStatusMessage.textContent, 'Please select a crop region first.');
   } finally {
     harness.cleanup();
   }
