@@ -22,6 +22,8 @@ A lightweight browser tool for cropping images with per-edge shape control. Each
 
 Clipboard read/write depends on browser support and usually requires a secure context (`https://` or `http://localhost`).
 
+Very large images can consume substantial browser memory during decoding and canvas processing. On low-memory devices or with unusually large source images, the tab may become slow or fail to render the crop preview.
+
 ## Usage
 
 1. Upload an image (click, drop, or paste).
