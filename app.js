@@ -914,6 +914,15 @@ for (const button of edgeAssignButtons){
   });
 }
 
+for (const input of [edgeTop, edgeRight, edgeBottom, edgeLeft]){
+  input.addEventListener('change', () => {
+    updateEdgeUi();
+    saveEdgeSettings();
+    if (img) redrawSource();
+    renderOutputPreview();
+  });
+}
+
 roughnessInput.addEventListener('input', () => {
   saveEdgeSettings();
   if (img) redrawSource();

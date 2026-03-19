@@ -397,6 +397,18 @@ test('applyLanguage updates visible labels and edge gallery text', () => {
   }
 });
 
+test('direct edge select changes update the visible edge assignment summary', () => {
+  const harness = createHarness();
+  try{
+    harness.elements.edgeTop.value = 'torn';
+    harness.elements.edgeTop.dispatch('change');
+
+    assert.equal(harness.edgeValueEls.top.textContent, 'Torn Paper');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('download uses a png filename even when the source extension differs', () => {
   const harness = createHarness();
   try{

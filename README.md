@@ -44,14 +44,27 @@ Open `http://localhost:8000` in your browser.
 
 - Core masking logic: `edge-mask.js`
 - UI and event handling: `app.js`
+- Install test dependencies:
+
+```bash
+npm install
+npx playwright install
+```
+
 - Regression tests:
 
 ```bash
-node --test tests/edge-mask.test.js tests/ui-state.test.js tests/app.test.js
+npm test
 ```
 
 - Browser end-to-end test:
 
 ```bash
-npx playwright test
+npm run test:e2e
+```
+
+- Run everything:
+
+```bash
+npm run test:all
 ```

@@ -44,14 +44,27 @@ python3 -m http.server 8000
 
 - コアのマスク処理: `edge-mask.js`
 - UI とイベント処理: `app.js`
+- テスト依存関係のインストール:
+
+```bash
+npm install
+npx playwright install
+```
+
 - 回帰テスト:
 
 ```bash
-node --test tests/edge-mask.test.js tests/ui-state.test.js tests/app.test.js
+npm test
 ```
 
 - ブラウザ E2E テスト:
 
 ```bash
-npx playwright test
+npm run test:e2e
+```
+
+- 全テスト実行:
+
+```bash
+npm run test:all
 ```
