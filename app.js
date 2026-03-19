@@ -496,6 +496,16 @@ function showStatus(key, type, autoHideMs){
   }
 }
 
+function clearStatus(){
+  if (showStatus._timer){
+    clearTimeout(showStatus._timer);
+    showStatus._timer = null;
+  }
+  statusMessage.hidden = true;
+  statusMessage.textContent = '';
+  statusMessage.className = 'status-message';
+}
+
 function updateSelectionUi(){
   const canCrop = hasValidSelection(rect, 2);
   const key = getSelectionHintKey(Boolean(img), rect, 2);
@@ -530,6 +540,7 @@ function loadImageFromBlob(blob, sourceFilename){
     currentSourceFilename = nextSourceFilename;
     imgOX = PAD;
     imgOY = PAD;
+    clearStatus();
 
     srcCanvas.width  = img.width  + PAD * 2;
     srcCanvas.height = img.height + PAD * 2;

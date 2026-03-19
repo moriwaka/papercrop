@@ -481,6 +481,30 @@ test('failed replacement upload preserves the previous download filename', () =>
   }
 });
 
+test('successful upload clears a previous load error status', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'broken' }, 'broken.webp');
+    const failedImage = harness.pendingImages[0];
+    failedImage.onerror();
+
+    assert.equal(harness.elements.statusMessage.hidden, false);
+    assert.equal(harness.elements.statusMessage.textContent, 'Failed to load image');
+
+    harness.app.loadImageFromBlob({ name: 'valid' }, 'photo.jpg');
+    const nextImage = harness.pendingImages[1];
+    nextImage.width = 120;
+    nextImage.height = 80;
+    nextImage.onload();
+
+    assert.equal(harness.elements.statusMessage.hidden, true);
+    assert.equal(harness.elements.statusMessage.textContent, '');
+    assert.equal(harness.elements.statusMessage.className, 'status-message');
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test('uploadFromClipboard shows an error when clipboard images are unavailable', async () => {
   const harness = createHarness({
     clipboard: {
