@@ -12,7 +12,7 @@ A lightweight browser tool for cropping images with per-edge shape control. Each
 - Optional outline and drop shadow
 - Checkerboard preview background for transparency checks
 - Image input methods:
-  - Click-to-upload
+  - Click the empty upload area, or use `Upload New Image`
   - Drag and drop
   - Clipboard paste
 - Output methods:
@@ -22,11 +22,11 @@ A lightweight browser tool for cropping images with per-edge shape control. Each
 
 Clipboard read/write depends on browser support and usually requires a secure context (`https://` or `http://localhost`).
 
-Very large images can consume substantial browser memory during decoding and canvas processing. On low-memory devices or with unusually large source images, the tab may become slow or fail to render the crop preview.
+Very large images are rejected before processing to avoid excessive browser memory use. If an image cannot be rendered or exported safely, the app shows an error instead of enabling a broken download.
 
 ## Usage
 
-1. Upload an image (click, drop, or paste).
+1. Upload an image (click the empty upload area, drop, paste, or use `Upload New Image`).
 2. Drag on the source image to define the crop area.
 3. Adjust edge shape, roughness, outline, and shadow options.
 4. Click `Crop` to render the result.

@@ -17,6 +17,8 @@ function createEventTarget(){
   };
 }
 
+let activeElement = null;
+
 function createClassList(){
   const set = new Set();
   return {
@@ -51,6 +53,9 @@ function createContextStub(){
     fillRect(){},
     fillText(){},
     getImageData(){
+      if (global.__paperCropThrowGetImageData){
+        throw new Error('tainted canvas');
+      }
       return { data: new Uint8ClampedArray(4) };
     },
     putImageData(){},
@@ -94,6 +99,9 @@ function createElement(id, extras = {}){
     click(){
       this.clickCalls += 1;
     },
+    focus(){
+      activeElement = this;
+    },
     contains(){
       return false;
     },
@@ -105,6 +113,9 @@ function createElement(id, extras = {}){
     },
     setPointerCapture(){},
     toDataURL(){
+      if (global.__paperCropThrowToDataURL){
+        throw new Error('export failed');
+      }
       return 'data:image/png;base64,';
     },
     toBlob(callback){
@@ -124,7 +135,7 @@ function createHarness(options = {}){
     'resetBtn', 'newUploadBtn', 'pasteUploadBtn', 'roughness', 'outlineEnabled',
     'shadowEnabled', 'srcDropZone', 'srcHint', 'mainDesc', 'sourceDesc',
     'edgeTopLabel', 'edgeRightLabel', 'edgeBottomLabel', 'edgeLeftLabel',
-    'edgeCenterLabel', 'edgeHelp', 'applyAllEdgesBtn', 'selectedEdgeTitle',
+    'edgeCenterLabel', 'edgeHelp', 'edgeGallery', 'applyAllEdgesBtn', 'selectedEdgeTitle',
     'selectedEdgeName', 'selectedEdgeDesc', 'roughnessLabel', 'outlineLabel',
     'shadowLabel', 'selectionHint', 'sourceStatusMessage', 'outputStatusMessage', 'edgeTop', 'edgeRight',
     'edgeBottom', 'edgeLeft'
@@ -198,6 +209,9 @@ function createHarness(options = {}){
 
   const document = {
     documentElement: { lang: 'ja' },
+    get activeElement(){
+      return activeElement;
+    },
     getElementById(id){
       return elements[id];
     },
@@ -331,6 +345,9 @@ function createHarness(options = {}){
 
   function cleanup(){
     delete require.cache[appPath];
+    activeElement = null;
+    delete global.__paperCropThrowGetImageData;
+    delete global.__paperCropThrowToDataURL;
     for (const [name, descriptor] of Object.entries(original)){
       if (descriptor){
         Object.defineProperty(global, name, descriptor);
@@ -641,6 +658,89 @@ test('crop without selection shows an output-area error instead of alert', () =>
     assert.equal(harness.window.alertCalls.length, 0);
     assert.equal(harness.elements.outputStatusMessage.hidden, false);
     assert.equal(harness.elements.outputStatusMessage.textContent, 'Please select a crop region first.');
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('oversized uploads are rejected before creating an object URL', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'huge' }, 'huge.png');
+    const image = harness.pendingImages[0];
+    image.width = 9000;
+    image.height = 9000;
+    image.onload();
+
+    assert.equal(harness.app._getState().img, null);
+    assert.equal(harness.elements.sourceStatusMessage.hidden, false);
+    assert.equal(harness.elements.sourceStatusMessage.textContent, 'Image is too large to process in this browser.');
+    assert.equal(harness.elements.downloadBtn.disabled, true);
+    assert.deepEqual(harness.revokedUrls, ['blob:1']);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('crop failures from canvas pixel reads disable export and show a status message', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'source' }, 'source.svg');
+    const image = harness.pendingImages[0];
+    image.width = 120;
+    image.height = 80;
+    image.onload();
+
+    global.__paperCropThrowGetImageData = true;
+    harness.app._setRect({ x: 32, y: 32, w: 24, h: 20 });
+    harness.app.updateSelectionUi();
+
+    assert.equal(harness.elements.outputStatusMessage.hidden, false);
+    assert.equal(harness.elements.outputStatusMessage.textContent, 'Failed to render the crop. Try another image format.');
+    assert.equal(harness.elements.downloadBtn.disabled, true);
+    assert.equal(harness.elements.copyBtn.disabled, true);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('download failures from canvas export show a status message', () => {
+  const harness = createHarness();
+  try{
+    harness.app.loadImageFromBlob({ name: 'source' }, 'source.png');
+    const image = harness.pendingImages[0];
+    image.width = 120;
+    image.height = 80;
+    image.onload();
+    harness.app._setRect({ x: 32, y: 32, w: 24, h: 20 });
+    harness.app.updateSelectionUi();
+
+    global.__paperCropThrowToDataURL = true;
+    harness.elements.downloadBtn.dispatch('click');
+
+    assert.equal(harness.createdAnchors.length, 0);
+    assert.equal(harness.elements.outputStatusMessage.hidden, false);
+    assert.equal(harness.elements.outputStatusMessage.textContent, 'Failed to export PNG. Try another image format.');
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test('edge gallery supports arrow-key radio navigation', () => {
+  const harness = createHarness();
+  try{
+    const [straightCard, tornCard] = harness.edgeCards;
+
+    straightCard.dispatch('keydown', {
+      key: 'ArrowRight',
+      preventDefault(){}
+    });
+
+    assert.equal(tornCard.getAttribute('aria-checked'), 'true');
+    assert.equal(tornCard.getAttribute('tabindex'), '0');
+    assert.equal(straightCard.getAttribute('tabindex'), '-1');
+    assert.equal(harness.document.activeElement, tornCard);
+    assert.equal(harness.elements.selectedEdgeName.textContent, 'Torn Paper');
   } finally {
     harness.cleanup();
   }

@@ -20,6 +20,7 @@ const edgeBottomLabel = document.getElementById('edgeBottomLabel');
 const edgeLeftLabel = document.getElementById('edgeLeftLabel');
 const edgeCenterLabel = document.getElementById('edgeCenterLabel');
 const edgeHelp = document.getElementById('edgeHelp');
+const edgeGallery = document.getElementById('edgeGallery');
 const roughnessLabel = document.getElementById('roughnessLabel');
 const outlineLabel = document.getElementById('outlineLabel');
 const shadowLabel = document.getElementById('shadowLabel');
@@ -53,6 +54,7 @@ const SHADOW_BLUR = 14;
 const SHADOW_OFFSET_X = 0;
 const SHADOW_OFFSET_Y = 6;
 const EDGE_SETTINGS_STORAGE_KEY = 'papercrop.edgeSettings.v1';
+const MAX_SOURCE_PIXELS = 32_000_000;
 const STATUS_AREAS = {
   source: sourceStatusMessage,
   output: outputStatusMessage
@@ -116,6 +118,9 @@ const I18N = {
     alertClipboardNoImage: 'クリップボードに画像がありません',
     alertClipboardReadFail: 'クリップボードからの読み取りに失敗しました',
     alertClipboardCopyFail: 'クリップボードへのコピーに失敗しました',
+    alertImageTooLarge: 'このブラウザで処理するには画像が大きすぎます。',
+    alertRenderFail: '切り抜きの描画に失敗しました。別の画像形式を試してください。',
+    alertDownloadFail: 'PNGの書き出しに失敗しました。別の画像形式を試してください。',
     statusCopySuccess: 'クリップボードにコピーしました',
     hintNoImage: '画像をアップロードして開始してください。',
     hintNeedSelection: '画像上をドラッグして切り抜き範囲を選択してください。',
@@ -160,6 +165,9 @@ const I18N = {
     alertClipboardNoImage: 'No image found in clipboard',
     alertClipboardReadFail: 'Failed to read from clipboard',
     alertClipboardCopyFail: 'Failed to copy to clipboard',
+    alertImageTooLarge: 'Image is too large to process in this browser.',
+    alertRenderFail: 'Failed to render the crop. Try another image format.',
+    alertDownloadFail: 'Failed to export PNG. Try another image format.',
     statusCopySuccess: 'Copied to clipboard',
     hintNoImage: 'Upload an image to start.',
     hintNeedSelection: 'Drag on the image to select a crop area.',
@@ -280,6 +288,7 @@ function applyLanguage(lang){
   edgeLeftLabel.textContent = t('edgeLeftLabel');
   edgeCenterLabel.textContent = t('edgeCenterLabel');
   edgeHelp.textContent = t('edgeHelp');
+  edgeGallery.setAttribute('aria-label', t('edgeCenterLabel'));
   roughnessLabel.textContent = t('roughnessLabel');
   outlineLabel.textContent = t('outlineLabel');
   shadowLabel.textContent = t('shadowLabel');
@@ -336,6 +345,7 @@ function updateEdgeUi(){
   for (const card of edgeCards){
     const isSelected = card.dataset.mode === selectedEdgeMode;
     card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    card.setAttribute('tabindex', isSelected ? '0' : '-1');
   }
   for (const [edge, el] of Object.entries(edgeValueEls)){
     if (el) el.textContent = getEdgeModeName(getEdgeValues()[edge]);
@@ -440,46 +450,52 @@ function renderOutputPreview(){
   outCanvas.height = outH;
   outCtx.clearRect(0, 0, outW, outH);
 
-  const sx = rect.x - imgOX;
-  const sy = rect.y - imgOY;
-  const rough = Number(roughnessInput.value);
-  const bounds = buildEdgeBounds(w, h, rough, getEdgeValues());
+  try{
+    const sx = rect.x - imgOX;
+    const sy = rect.y - imgOY;
+    const rough = Number(roughnessInput.value);
+    const bounds = buildEdgeBounds(w, h, rough, getEdgeValues());
 
-  const maskedCanvas = document.createElement('canvas');
-  maskedCanvas.width = w;
-  maskedCanvas.height = h;
-  const maskedCtx = maskedCanvas.getContext('2d');
-  maskedCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
-  const imageData = maskedCtx.getImageData(0, 0, w, h);
-  applyEdgeMask(imageData, bounds, w, h);
-  maskedCtx.putImageData(imageData, 0, 0);
+    const maskedCanvas = document.createElement('canvas');
+    maskedCanvas.width = w;
+    maskedCanvas.height = h;
+    const maskedCtx = maskedCanvas.getContext('2d');
+    maskedCtx.drawImage(img, sx, sy, rect.w, rect.h, 0, 0, w, h);
+    const imageData = maskedCtx.getImageData(0, 0, w, h);
+    applyEdgeMask(imageData, bounds, w, h);
+    maskedCtx.putImageData(imageData, 0, 0);
 
-  if (withShadow){
-    outCtx.save();
-    outCtx.shadowColor = SHADOW_COLOR;
-    outCtx.shadowBlur = SHADOW_BLUR;
-    outCtx.shadowOffsetX = SHADOW_OFFSET_X;
-    outCtx.shadowOffsetY = SHADOW_OFFSET_Y;
+    if (withShadow){
+      outCtx.save();
+      outCtx.shadowColor = SHADOW_COLOR;
+      outCtx.shadowBlur = SHADOW_BLUR;
+      outCtx.shadowOffsetX = SHADOW_OFFSET_X;
+      outCtx.shadowOffsetY = SHADOW_OFFSET_Y;
+      outCtx.drawImage(maskedCanvas, insets.left, insets.top);
+      outCtx.restore();
+    }
+
     outCtx.drawImage(maskedCanvas, insets.left, insets.top);
-    outCtx.restore();
+
+    if (withOutline){
+      outCtx.save();
+      outCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      outCtx.lineWidth = 1.5;
+      outCtx.lineJoin = 'round';
+      outCtx.lineCap = 'round';
+      outCtx.miterLimit = 2;
+      drawEdgePath(outCtx, bounds, w, h, insets.left, insets.top);
+      outCtx.stroke();
+      outCtx.restore();
+    }
+
+    clearStatus('output');
+    downloadBtn.disabled = false;
+    copyBtn.disabled = false;
+  } catch (e){
+    clearOutput();
+    showStatus('output', 'alertRenderFail', 'error');
   }
-
-  outCtx.drawImage(maskedCanvas, insets.left, insets.top);
-
-  if (withOutline){
-    outCtx.save();
-    outCtx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-    outCtx.lineWidth = 1.5;
-    outCtx.lineJoin = 'round';
-    outCtx.lineCap = 'round';
-    outCtx.miterLimit = 2;
-    drawEdgePath(outCtx, bounds, w, h, insets.left, insets.top);
-    outCtx.stroke();
-    outCtx.restore();
-  }
-
-  downloadBtn.disabled = false;
-  copyBtn.disabled = false;
 }
 
 function showStatus(area, key, type, autoHideMs){
@@ -557,6 +573,18 @@ function loadImageFromBlob(blob, sourceFilename){
   nextImg.onload = () => {
     if (loadToken !== currentLoadToken) {
       URL.revokeObjectURL(url);
+      return;
+    }
+    const sourcePixels = nextImg.width * nextImg.height;
+    if (!Number.isFinite(sourcePixels) || sourcePixels > MAX_SOURCE_PIXELS){
+      clearDragState();
+      clearOutput();
+      showStatus('source', 'alertImageTooLarge', 'error');
+      updateSourceState();
+      if (currentObjectUrl === url){
+        URL.revokeObjectURL(url);
+        currentObjectUrl = null;
+      }
       return;
     }
     clearDragState();
@@ -918,10 +946,15 @@ cropBtn.addEventListener('click', () => {
 });
 
 downloadBtn.addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = outCanvas.toDataURL('image/png');
-  a.download = buildDownloadFilename();
-  a.click();
+  try{
+    const href = outCanvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = buildDownloadFilename();
+    a.click();
+  } catch (e){
+    showStatus('output', 'alertDownloadFail', 'error');
+  }
 });
 
 copyBtn.addEventListener('click', async () => {
@@ -955,6 +988,26 @@ applyAllEdgesBtn.addEventListener('click', () => {
 for (const card of edgeCards){
   card.addEventListener('click', () => {
     selectEdgeMode(card.dataset.mode || 'straight');
+  });
+  card.addEventListener('keydown', (e) => {
+    const currentIndex = edgeCards.indexOf(card);
+    if (currentIndex < 0) return;
+    let nextIndex = currentIndex;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown'){
+      nextIndex = (currentIndex + 1) % edgeCards.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp'){
+      nextIndex = (currentIndex - 1 + edgeCards.length) % edgeCards.length;
+    } else if (e.key === 'Home'){
+      nextIndex = 0;
+    } else if (e.key === 'End'){
+      nextIndex = edgeCards.length - 1;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    const nextCard = edgeCards[nextIndex];
+    selectEdgeMode(nextCard.dataset.mode || 'straight');
+    nextCard.focus();
   });
 }
 
